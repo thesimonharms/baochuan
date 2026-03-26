@@ -1,0 +1,32 @@
+# Build output
+/target/
+
+# Cargo.lock is not committed for libraries (only for binaries/workspaces)
+Cargo.lock
+
+# Environment / secrets — never commit API keys
+.env
+.env.*
+*.env
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# AI editor files
+.claude/
+.cursor/
+.copilot/
+.aider*
+.codex/
+CLAUDE.md
+.windsurfrules
+.cursorrules
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rust
+**/*.rs.bk

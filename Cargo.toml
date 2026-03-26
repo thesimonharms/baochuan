@@ -1,0 +1,27 @@
+[package]
+name = "baochuan"
+version = "0.1.0"
+edition = "2021"
+description = "A multi-provider AI API client for Rust — connecting your code to every major AI provider."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/simonharms/baochuan"
+documentation = "https://docs.rs/baochuan"
+keywords = ["ai", "llm", "openai", "anthropic", "gemini"]
+categories = ["api-bindings", "asynchronous", "web-programming::http-client"]
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+futures-util = "0.3"
+thiserror = "2"
+tracing = "0.1"
+async-trait = "0.1"
+bytes = "1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }
+tracing-subscriber = "0.3"
+mockito = "1"
