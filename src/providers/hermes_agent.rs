@@ -3,7 +3,7 @@ use reqwest::Client;
 use tracing::{debug, error};
 
 use crate::agent::{
-    sse_to_agent_events, AgentEventStream, AgentProvider, AgentResponse, AgentRunRequest,
+    AgentEventStream, AgentProvider, AgentResponse, AgentRunRequest, sse_to_agent_events,
 };
 use crate::error::BaochuanError;
 

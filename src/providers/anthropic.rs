@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use reqwest::{header, Client};
+use reqwest::{Client, header};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 

@@ -1,4 +1,4 @@
-use baochuan::{providers::HermesAgentProvider, AgentInput, AgentProvider, AgentRunRequestBuilder};
+use baochuan::{AgentInput, AgentProvider, AgentRunRequestBuilder, providers::HermesAgentProvider};
 use futures_util::StreamExt;
 
 fn hermes_response_body() -> &'static str {
