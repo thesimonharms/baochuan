@@ -1,7 +1,7 @@
 [package]
 name = "baochuan"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "A multi-provider AI API client for Rust — connecting your code to every major AI provider."
 license = "MIT"
 readme = "README.md"

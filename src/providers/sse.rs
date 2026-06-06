@@ -101,36 +101,34 @@ where
 
                     match current_event.as_str() {
                         "message_start" => {
-                            if let Ok(event) = serde_json::from_str::<AnthropicStreamEvent>(data) {
-                                if let Some(msg) = event.message {
-                                    message_id = msg.id.unwrap_or_default();
-                                    model = msg.model.unwrap_or_default();
-                                }
+                            if let Ok(event) = serde_json::from_str::<AnthropicStreamEvent>(data)
+                                && let Some(msg) = event.message
+                            {
+                                message_id = msg.id.unwrap_or_default();
+                                model = msg.model.unwrap_or_default();
                             }
                         }
                         "content_block_delta" => {
-                            if let Ok(event) = serde_json::from_str::<AnthropicStreamEvent>(data) {
-                                if let Some(AnthropicStreamDelta {
+                            if let Ok(event) = serde_json::from_str::<AnthropicStreamEvent>(data)
+                                && let Some(AnthropicStreamDelta {
                                     delta_type: Some(ref t),
                                     text: Some(ref text),
                                 }) = event.delta
-                                {
-                                    if t == "text_delta" {
-                                        chunks.push(Ok(StreamChunk {
-                                            id: message_id.clone(),
-                                            model: model.clone(),
-                                            choices: vec![StreamChoice {
-                                                index: 0,
-                                                delta: Delta {
-                                                    role: None,
-                                                    content: Some(text.clone()),
-                                                    tool_calls: None,
-                                                },
-                                                finish_reason: None,
-                                            }],
-                                        }));
-                                    }
-                                }
+                                && t == "text_delta"
+                            {
+                                chunks.push(Ok(StreamChunk {
+                                    id: message_id.clone(),
+                                    model: model.clone(),
+                                    choices: vec![StreamChoice {
+                                        index: 0,
+                                        delta: Delta {
+                                            role: None,
+                                            content: Some(text.clone()),
+                                            tool_calls: None,
+                                        },
+                                        finish_reason: None,
+                                    }],
+                                }));
                             }
                         }
                         "message_stop" => {
