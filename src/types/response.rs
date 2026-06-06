@@ -43,7 +43,9 @@ pub struct ChatResponse {
 impl ChatResponse {
     /// Returns the text content of the first choice, if present.
     pub fn content(&self) -> Option<&str> {
-        self.choices.first().and_then(|c| c.message.content.as_str())
+        self.choices
+            .first()
+            .and_then(|c| c.message.content.as_str())
     }
 }
 

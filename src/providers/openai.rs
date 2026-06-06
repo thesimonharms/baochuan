@@ -43,7 +43,9 @@ impl OpenAIProvider {
     /// );
     /// ```
     pub fn new(api_key: impl Into<String>) -> Self {
-        Self { inner: OpenAICompatClient::with_key(api_key, DEFAULT_BASE_URL) }
+        Self {
+            inner: OpenAICompatClient::with_key(api_key, DEFAULT_BASE_URL),
+        }
     }
 
     /// Override the base URL (e.g. for Azure OpenAI or local proxies).

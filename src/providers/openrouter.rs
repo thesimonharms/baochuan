@@ -119,35 +119,46 @@ impl Provider for OpenRouterProvider {
         let status = response.status();
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let list: OpenRouterModelList = response.json().await?;
-        Ok(list.data.into_iter().map(|m| ModelInfo {
-            id: m.id,
-            owned_by: None,
-            context_length: m.context_length,
-            display_name: m.name,
-        }).collect())
+        Ok(list
+            .data
+            .into_iter()
+            .map(|m| ModelInfo {
+                id: m.id,
+                owned_by: None,
+                context_length: m.context_length,
+                display_name: m.name,
+            })
+            .collect())
     }
 
     async fn chat(&self, request: &ChatRequest) -> Result<ChatResponse, BaochuanError> {
         debug!(model = %request.model, "sending chat request to OpenRouter");
 
-        let response = self.apply_headers(
-            self.inner
-                .auth(self.inner.client.post(self.inner.chat_url()))
-                .header(header::CONTENT_TYPE, "application/json")
-                .json(request),
-        )
-        .send()
-        .await?;
+        let response = self
+            .apply_headers(
+                self.inner
+                    .auth(self.inner.client.post(self.inner.chat_url()))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .json(request),
+            )
+            .send()
+            .await?;
 
         let status = response.status();
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "OpenRouter API error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let chat_response: ChatResponse = response.json().await?;
@@ -161,20 +172,24 @@ impl Provider for OpenRouterProvider {
         let mut body = serde_json::to_value(request)?;
         body["stream"] = serde_json::Value::Bool(true);
 
-        let response = self.apply_headers(
-            self.inner
-                .auth(self.inner.client.post(self.inner.chat_url()))
-                .header(header::CONTENT_TYPE, "application/json")
-                .json(&body),
-        )
-        .send()
-        .await?;
+        let response = self
+            .apply_headers(
+                self.inner
+                    .auth(self.inner.client.post(self.inner.chat_url()))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .json(&body),
+            )
+            .send()
+            .await?;
 
         let status = response.status();
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "OpenRouter stream error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         Ok(Box::pin(sse_to_chunks(response.bytes_stream())))

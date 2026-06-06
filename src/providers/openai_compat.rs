@@ -27,12 +27,20 @@ pub(crate) struct OpenAICompatClient {
 impl OpenAICompatClient {
     /// Create a client with a required API key.
     pub fn with_key(api_key: impl Into<String>, base_url: impl Into<String>) -> Self {
-        Self { client: Client::new(), api_key: Some(api_key.into()), base_url: base_url.into() }
+        Self {
+            client: Client::new(),
+            api_key: Some(api_key.into()),
+            base_url: base_url.into(),
+        }
     }
 
     /// Create a client with no API key (e.g. llama.cpp, local LM Studio without auth).
     pub fn no_key(base_url: impl Into<String>) -> Self {
-        Self { client: Client::new(), api_key: None, base_url: base_url.into() }
+        Self {
+            client: Client::new(),
+            api_key: None,
+            base_url: base_url.into(),
+        }
     }
 
     /// Apply bearer auth to a request builder if an API key is set.
@@ -73,7 +81,10 @@ impl OpenAICompatClient {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, provider = %provider_name, "API error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let resp: ChatResponse = response.json().await?;
@@ -102,7 +113,10 @@ impl OpenAICompatClient {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, provider = %provider_name, "stream error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         Ok(Box::pin(sse_to_chunks(response.bytes_stream())))
@@ -134,7 +148,10 @@ impl OpenAICompatClient {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, provider = %provider_name, "TTS error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         Ok(response.bytes().await?.to_vec())

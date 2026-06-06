@@ -120,7 +120,10 @@ impl Provider for CopilotProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Copilot API error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let resp: ChatResponse = response.json().await?;
@@ -147,7 +150,10 @@ impl Provider for CopilotProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Copilot stream error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         Ok(Box::pin(sse_to_chunks(response.bytes_stream())))

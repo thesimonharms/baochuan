@@ -6,7 +6,7 @@ use tracing::{debug, error};
 use crate::error::BaochuanError;
 use crate::provider::{ChunkStream, Provider};
 use crate::providers::sse::cf_sse_to_chunks;
-use crate::types::{ChatMessage, ChatRequest, ChatResponse, ChatChoice, ModelInfo, Role};
+use crate::types::{ChatChoice, ChatMessage, ChatRequest, ChatResponse, ModelInfo, Role};
 
 const BASE_URL: &str = "https://api.cloudflare.com/client/v4";
 
@@ -196,16 +196,23 @@ impl Provider for CloudflareProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Cloudflare models error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let envelope: CfModelSearchResponse = response.json().await?;
-        Ok(envelope.result.into_iter().map(|m| ModelInfo {
-            id: m.id,
-            owned_by: m.task.map(|t| t.name),
-            context_length: None,
-            display_name: m.description,
-        }).collect())
+        Ok(envelope
+            .result
+            .into_iter()
+            .map(|m| ModelInfo {
+                id: m.id,
+                owned_by: m.task.map(|t| t.name),
+                context_length: None,
+                display_name: m.description,
+            })
+            .collect())
     }
 
     async fn chat(&self, request: &ChatRequest) -> Result<ChatResponse, BaochuanError> {
@@ -230,13 +237,24 @@ impl Provider for CloudflareProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Cloudflare API error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let envelope: CfResponse<CfChatResult> = response.json().await?;
         if !envelope.success {
-            let msg = envelope.errors.into_iter().map(|e| e.message).collect::<Vec<_>>().join("; ");
-            return Err(BaochuanError::Api { status: 200, message: msg });
+            let msg = envelope
+                .errors
+                .into_iter()
+                .map(|e| e.message)
+                .collect::<Vec<_>>()
+                .join("; ");
+            return Err(BaochuanError::Api {
+                status: 200,
+                message: msg,
+            });
         }
 
         let result = envelope.result.ok_or_else(|| BaochuanError::Api {
@@ -269,7 +287,10 @@ impl Provider for CloudflareProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Cloudflare stream error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let model = request.model.clone();

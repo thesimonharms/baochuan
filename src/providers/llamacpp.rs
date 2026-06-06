@@ -45,7 +45,9 @@ impl LlamaCppProvider {
     /// Create a provider pointing at the default llama.cpp server address
     /// (`http://localhost:8080`). The `/v1` path prefix is added automatically.
     pub fn new() -> Self {
-        Self { inner: OpenAICompatClient::no_key(DEFAULT_BASE_URL) }
+        Self {
+            inner: OpenAICompatClient::no_key(DEFAULT_BASE_URL),
+        }
     }
 
     /// Override the server address. Pass the root URL (e.g.

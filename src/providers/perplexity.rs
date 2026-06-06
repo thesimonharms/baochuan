@@ -81,7 +81,9 @@ impl PerplexityProvider {
     /// );
     /// ```
     pub fn new(api_key: impl Into<String>) -> Self {
-        Self { inner: OpenAICompatClient::with_key(api_key, DEFAULT_BASE_URL) }
+        Self {
+            inner: OpenAICompatClient::with_key(api_key, DEFAULT_BASE_URL),
+        }
     }
 
     /// Override the base URL.
@@ -110,16 +112,23 @@ impl Provider for PerplexityProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Perplexity models error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let list: PerplexityModelList = response.json().await?;
-        Ok(list.data.into_iter().map(|m| ModelInfo {
-            id: m.id,
-            owned_by: m.owned_by,
-            context_length: m.context_length,
-            display_name: None,
-        }).collect())
+        Ok(list
+            .data
+            .into_iter()
+            .map(|m| ModelInfo {
+                id: m.id,
+                owned_by: m.owned_by,
+                context_length: m.context_length,
+                display_name: None,
+            })
+            .collect())
     }
 
     async fn chat(&self, request: &ChatRequest) -> Result<ChatResponse, BaochuanError> {
@@ -136,7 +145,10 @@ impl Provider for PerplexityProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Perplexity API error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let ppl: PerplexityResponse = response.json().await?;
@@ -146,7 +158,11 @@ impl Provider for PerplexityProvider {
             model: ppl.model,
             choices: ppl.choices,
             usage: ppl.usage,
-            citations: if ppl.citations.is_empty() { None } else { Some(ppl.citations) },
+            citations: if ppl.citations.is_empty() {
+                None
+            } else {
+                Some(ppl.citations)
+            },
         })
     }
 

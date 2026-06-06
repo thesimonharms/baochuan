@@ -9,10 +9,9 @@ use crate::error::BaochuanError;
 use crate::provider::{ChunkStream, Provider};
 use crate::providers::helpers::parse_data_url;
 use crate::types::{
-    ChatMessage, ChatRequest, ChatResponse, ChatChoice, ContentPart, Delta, MessageContent,
-    ModelInfo, Role, StreamChunk, StreamChoice, Usage,
+    ChatChoice, ChatMessage, ChatRequest, ChatResponse, ContentPart, Delta, MessageContent,
+    ModelInfo, Role, StreamChoice, StreamChunk, Usage,
 };
-
 
 const DEFAULT_BASE_URL: &str = "http://localhost:11434";
 
@@ -94,13 +93,16 @@ fn to_ollama_messages(messages: &[ChatMessage]) -> Vec<OllamaMessage> {
             // Ollama passes images as a separate base64 array, extracted from
             // data-URL image parts. HTTP-URL images are not supported natively.
             let images: Vec<String> = match &m.content {
-                MessageContent::Parts(parts) => parts.iter().filter_map(|p| {
-                    if let ContentPart::ImageUrl { image_url } = p {
-                        parse_data_url(&image_url.url).map(|(_mime, data)| data)
-                    } else {
-                        None
-                    }
-                }).collect(),
+                MessageContent::Parts(parts) => parts
+                    .iter()
+                    .filter_map(|p| {
+                        if let ContentPart::ImageUrl { image_url } = p {
+                            parse_data_url(&image_url.url).map(|(_mime, data)| data)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect(),
                 _ => vec![],
             };
 
@@ -112,7 +114,11 @@ fn to_ollama_messages(messages: &[ChatMessage]) -> Vec<OllamaMessage> {
                     Role::Tool => "tool".to_string(),
                 },
                 content: m.content.to_text_lossy(),
-                images: if images.is_empty() { None } else { Some(images) },
+                images: if images.is_empty() {
+                    None
+                } else {
+                    Some(images)
+                },
             }
         })
         .collect()
@@ -181,8 +187,11 @@ fn ollama_ndjson_to_chunks(
                     match serde_json::from_str::<OllamaStreamChunk>(&line) {
                         Ok(chunk) => {
                             chunk_index += 1;
-                            let finish_reason =
-                                if chunk.done { Some("stop".to_string()) } else { None };
+                            let finish_reason = if chunk.done {
+                                Some("stop".to_string())
+                            } else {
+                                None
+                            };
                             let content = if chunk.message.content.is_empty() {
                                 None
                             } else {
@@ -193,7 +202,11 @@ fn ollama_ndjson_to_chunks(
                                 model: chunk.model,
                                 choices: vec![StreamChoice {
                                     index: 0,
-                                    delta: Delta { role: None, content, tool_calls: None },
+                                    delta: Delta {
+                                        role: None,
+                                        content,
+                                        tool_calls: None,
+                                    },
                                     finish_reason,
                                 }],
                             }));
@@ -291,26 +304,33 @@ impl Provider for OllamaProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Ollama models error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let list: OllamaModelList = response.json().await?;
-        Ok(list.models.into_iter().map(|m| {
-            let display = m.details.as_ref().and_then(|d| {
-                match (&d.parameter_size, &d.quantization_level) {
-                    (Some(p), Some(q)) => Some(format!("{p} · {q}")),
-                    (Some(p), None) => Some(p.clone()),
-                    _ => None,
+        Ok(list
+            .models
+            .into_iter()
+            .map(|m| {
+                let display = m.details.as_ref().and_then(|d| {
+                    match (&d.parameter_size, &d.quantization_level) {
+                        (Some(p), Some(q)) => Some(format!("{p} · {q}")),
+                        (Some(p), None) => Some(p.clone()),
+                        _ => None,
+                    }
+                });
+                let owned_by = m.details.as_ref().and_then(|d| d.family.clone());
+                ModelInfo {
+                    id: m.name,
+                    owned_by,
+                    context_length: None, // not in /api/tags; use /api/show for details
+                    display_name: display,
                 }
-            });
-            let owned_by = m.details.as_ref().and_then(|d| d.family.clone());
-            ModelInfo {
-                id: m.name,
-                owned_by,
-                context_length: None, // not in /api/tags; use /api/show for details
-                display_name: display,
-            }
-        }).collect())
+            })
+            .collect())
     }
 
     async fn chat(&self, request: &ChatRequest) -> Result<ChatResponse, BaochuanError> {
@@ -343,7 +363,10 @@ impl Provider for OllamaProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Ollama API error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let ollama_response: OllamaChatResponse = response.json().await?;
@@ -380,7 +403,10 @@ impl Provider for OllamaProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "Ollama stream error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         Ok(Box::pin(ollama_ndjson_to_chunks(response.bytes_stream())))

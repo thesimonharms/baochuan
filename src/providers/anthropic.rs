@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use reqwest::{Client, header};
+use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
@@ -8,7 +8,7 @@ use crate::provider::{ChunkStream, Provider};
 use crate::providers::helpers::parse_data_url;
 use crate::providers::sse::anthropic_sse_to_chunks;
 use crate::types::{
-    ChatMessage, ChatRequest, ChatResponse, ChatChoice, ContentPart, DocumentInput, FunctionCall,
+    ChatChoice, ChatMessage, ChatRequest, ChatResponse, ContentPart, DocumentInput, FunctionCall,
     MessageContent, ModelInfo, Role, ToolCall, ToolChoice, Usage,
 };
 
@@ -82,11 +82,24 @@ enum AnthropicMessageContent {
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum AnthropicContentBlock {
-    Text { text: String },
-    Image { source: AnthropicImageSource },
-    Document { source: AnthropicDocumentSource },
-    ToolUse { id: String, name: String, input: serde_json::Value },
-    ToolResult { tool_use_id: String, content: String },
+    Text {
+        text: String,
+    },
+    Image {
+        source: AnthropicImageSource,
+    },
+    Document {
+        source: AnthropicDocumentSource,
+    },
+    ToolUse {
+        id: String,
+        name: String,
+        input: serde_json::Value,
+    },
+    ToolResult {
+        tool_use_id: String,
+        content: String,
+    },
 }
 
 #[derive(Serialize)]
@@ -132,32 +145,35 @@ struct AnthropicUsage {
 // ── Conversion helpers ────────────────────────────────────────────────────────
 
 fn content_parts_to_anthropic(parts: &[ContentPart]) -> Vec<AnthropicContentBlock> {
-    parts.iter().filter_map(|p| match p {
-        ContentPart::Text { text } => {
-            Some(AnthropicContentBlock::Text { text: text.clone() })
-        }
-        ContentPart::ImageUrl { image_url } => {
-            if let Some((media_type, data)) = parse_data_url(&image_url.url) {
-                Some(AnthropicContentBlock::Image {
-                    source: AnthropicImageSource::Base64 { media_type, data },
-                })
-            } else {
-                Some(AnthropicContentBlock::Image {
-                    source: AnthropicImageSource::Url { url: image_url.url.clone() },
-                })
+    parts
+        .iter()
+        .filter_map(|p| match p {
+            ContentPart::Text { text } => Some(AnthropicContentBlock::Text { text: text.clone() }),
+            ContentPart::ImageUrl { image_url } => {
+                if let Some((media_type, data)) = parse_data_url(&image_url.url) {
+                    Some(AnthropicContentBlock::Image {
+                        source: AnthropicImageSource::Base64 { media_type, data },
+                    })
+                } else {
+                    Some(AnthropicContentBlock::Image {
+                        source: AnthropicImageSource::Url {
+                            url: image_url.url.clone(),
+                        },
+                    })
+                }
             }
-        }
-        ContentPart::Document { document: DocumentInput { data, media_type } } => {
-            Some(AnthropicContentBlock::Document {
+            ContentPart::Document {
+                document: DocumentInput { data, media_type },
+            } => Some(AnthropicContentBlock::Document {
                 source: AnthropicDocumentSource::Base64 {
                     media_type: media_type.clone(),
                     data: data.clone(),
                 },
-            })
-        }
-        // Anthropic does not support audio input — drop the part.
-        ContentPart::InputAudio { .. } => None,
-    }).collect()
+            }),
+            // Anthropic does not support audio input — drop the part.
+            ContentPart::InputAudio { .. } => None,
+        })
+        .collect()
 }
 
 fn to_anthropic_message(m: &ChatMessage) -> AnthropicMessage {
@@ -166,12 +182,10 @@ fn to_anthropic_message(m: &ChatMessage) -> AnthropicMessage {
         let tool_use_id = m.tool_call_id.clone().unwrap_or_default();
         return AnthropicMessage {
             role: "user".to_string(),
-            content: AnthropicMessageContent::Parts(vec![
-                AnthropicContentBlock::ToolResult {
-                    tool_use_id,
-                    content: m.content.to_text_lossy(),
-                }
-            ]),
+            content: AnthropicMessageContent::Parts(vec![AnthropicContentBlock::ToolResult {
+                tool_use_id,
+                content: m.content.to_text_lossy(),
+            }]),
         };
     }
 
@@ -218,21 +232,27 @@ fn to_anthropic_message(m: &ChatMessage) -> AnthropicMessage {
 }
 
 fn to_anthropic_tool_choice(tc: &ToolChoice) -> AnthropicToolChoice {
-    use crate::types::tools::{ToolChoicePreset};
+    use crate::types::tools::ToolChoicePreset;
     match tc {
-        ToolChoice::Preset(ToolChoicePreset::Auto) => {
-            AnthropicToolChoice { choice_type: "auto".to_string(), name: None }
-        }
+        ToolChoice::Preset(ToolChoicePreset::Auto) => AnthropicToolChoice {
+            choice_type: "auto".to_string(),
+            name: None,
+        },
         ToolChoice::Preset(ToolChoicePreset::Required) => {
             // Anthropic uses "any" to mean "must use at least one tool"
-            AnthropicToolChoice { choice_type: "any".to_string(), name: None }
+            AnthropicToolChoice {
+                choice_type: "any".to_string(),
+                name: None,
+            }
         }
-        ToolChoice::Preset(ToolChoicePreset::None) => {
-            AnthropicToolChoice { choice_type: "none".to_string(), name: None }
-        }
-        ToolChoice::Function(f) => {
-            AnthropicToolChoice { choice_type: "tool".to_string(), name: Some(f.function.name.clone()) }
-        }
+        ToolChoice::Preset(ToolChoicePreset::None) => AnthropicToolChoice {
+            choice_type: "none".to_string(),
+            name: None,
+        },
+        ToolChoice::Function(f) => AnthropicToolChoice {
+            choice_type: "tool".to_string(),
+            name: Some(f.function.name.clone()),
+        },
     }
 }
 
@@ -260,11 +280,14 @@ fn to_anthropic_request(request: &ChatRequest, stream: bool) -> AnthropicRequest
         .collect();
 
     let tools = request.tools.as_ref().map(|tools| {
-        tools.iter().map(|t| AnthropicTool {
-            name: t.function.name.clone(),
-            description: t.function.description.clone(),
-            input_schema: t.function.parameters.clone(),
-        }).collect()
+        tools
+            .iter()
+            .map(|t| AnthropicTool {
+                name: t.function.name.clone(),
+                description: t.function.description.clone(),
+                input_schema: t.function.parameters.clone(),
+            })
+            .collect()
     });
 
     let tool_choice = request.tool_choice.as_ref().map(to_anthropic_tool_choice);
@@ -294,7 +317,8 @@ fn from_anthropic_response(resp: AnthropicResponse) -> ChatResponse {
             }
             "tool_use" => {
                 if let (Some(id), Some(name)) = (block.id, block.name) {
-                    let arguments = block.input
+                    let arguments = block
+                        .input
                         .map(|v| v.to_string())
                         .unwrap_or_else(|| "{}".to_string());
                     tool_calls.push(ToolCall {
@@ -421,16 +445,23 @@ impl Provider for AnthropicProvider {
         let status = response.status();
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let list: AnthropicModelList = response.json().await?;
-        Ok(list.data.into_iter().map(|m| ModelInfo {
-            id: m.id,
-            owned_by: Some("anthropic".to_string()),
-            context_length: None,
-            display_name: m.display_name,
-        }).collect())
+        Ok(list
+            .data
+            .into_iter()
+            .map(|m| ModelInfo {
+                id: m.id,
+                owned_by: Some("anthropic".to_string()),
+                context_length: None,
+                display_name: m.display_name,
+            })
+            .collect())
     }
 
     async fn chat(&self, request: &ChatRequest) -> Result<ChatResponse, BaochuanError> {

@@ -75,7 +75,9 @@ impl LmStudioProvider {
     /// Create a provider pointing at the default LM Studio address
     /// (`http://localhost:1234`). The `/api/v0` path prefix is added automatically.
     pub fn new() -> Self {
-        Self { inner: OpenAICompatClient::no_key(DEFAULT_BASE_URL) }
+        Self {
+            inner: OpenAICompatClient::no_key(DEFAULT_BASE_URL),
+        }
     }
 
     /// Override the server address. Pass the root URL (e.g.
@@ -118,23 +120,30 @@ impl Provider for LmStudioProvider {
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             error!(status = %status, body = %body, "LM Studio models error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let list: LmsModelList = response.json().await?;
-        Ok(list.data.into_iter().map(|m| {
-            let display = match (&m.arch, &m.quantization) {
-                (Some(arch), Some(quant)) => Some(format!("{arch} · {quant}")),
-                (Some(arch), None) => Some(arch.clone()),
-                _ => None,
-            };
-            ModelInfo {
-                id: m.id,
-                owned_by: m.publisher,
-                context_length: m.max_context_length,
-                display_name: display,
-            }
-        }).collect())
+        Ok(list
+            .data
+            .into_iter()
+            .map(|m| {
+                let display = match (&m.arch, &m.quantization) {
+                    (Some(arch), Some(quant)) => Some(format!("{arch} · {quant}")),
+                    (Some(arch), None) => Some(arch.clone()),
+                    _ => None,
+                };
+                ModelInfo {
+                    id: m.id,
+                    owned_by: m.publisher,
+                    context_length: m.max_context_length,
+                    display_name: display,
+                }
+            })
+            .collect())
     }
 
     async fn chat(&self, request: &ChatRequest) -> Result<ChatResponse, BaochuanError> {

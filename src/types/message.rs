@@ -77,11 +77,15 @@ impl MessageContent {
 }
 
 impl From<String> for MessageContent {
-    fn from(s: String) -> Self { Self::Text(s) }
+    fn from(s: String) -> Self {
+        Self::Text(s)
+    }
 }
 
 impl From<&str> for MessageContent {
-    fn from(s: &str) -> Self { Self::Text(s.to_string()) }
+    fn from(s: &str) -> Self {
+        Self::Text(s.to_string())
+    }
 }
 
 // ── ContentPart ───────────────────────────────────────────────────────────────
@@ -128,7 +132,12 @@ impl ContentPart {
     /// - HTTPS URL: `"https://example.com/photo.jpg"`
     /// - Data URL:  `"data:image/jpeg;base64,/9j/4AAQ..."`
     pub fn image_url(url: impl Into<String>) -> Self {
-        Self::ImageUrl { image_url: ImageUrl { url: url.into(), detail: None } }
+        Self::ImageUrl {
+            image_url: ImageUrl {
+                url: url.into(),
+                detail: None,
+            },
+        }
     }
 
     /// Create an audio input part from base64-encoded audio data.
@@ -137,7 +146,10 @@ impl ContentPart {
     /// `"opus"`, `"aac"`, `"pcm16"`.
     pub fn audio(data: impl Into<String>, format: impl Into<String>) -> Self {
         Self::InputAudio {
-            input_audio: AudioInput { data: data.into(), format: format.into() },
+            input_audio: AudioInput {
+                data: data.into(),
+                format: format.into(),
+            },
         }
     }
 
@@ -146,7 +158,10 @@ impl ContentPart {
     /// `media_type` is the MIME type, e.g. `"application/pdf"` or `"text/plain"`.
     pub fn document(data: impl Into<String>, media_type: impl Into<String>) -> Self {
         Self::Document {
-            document: DocumentInput { data: data.into(), media_type: media_type.into() },
+            document: DocumentInput {
+                data: data.into(),
+                media_type: media_type.into(),
+            },
         }
     }
 }
@@ -182,13 +197,14 @@ impl AudioInput {
     /// Returns the MIME type corresponding to this audio format, e.g. `"audio/wav"`.
     pub fn mime_type(&self) -> String {
         match self.format.as_str() {
-            "mp3"   => "audio/mpeg",
-            "flac"  => "audio/flac",
-            "opus"  => "audio/ogg; codecs=opus",
-            "aac"   => "audio/aac",
+            "mp3" => "audio/mpeg",
+            "flac" => "audio/flac",
+            "opus" => "audio/ogg; codecs=opus",
+            "aac" => "audio/aac",
             "pcm16" => "audio/pcm",
-            _       => "audio/wav", // default
-        }.to_string()
+            _ => "audio/wav", // default
+        }
+        .to_string()
     }
 }
 
@@ -221,7 +237,6 @@ pub struct AudioOutput {
     /// Text transcript of the audio, if included by the provider.
     pub transcript: Option<String>,
 }
-
 
 // ── ChatMessage ───────────────────────────────────────────────────────────────
 
@@ -259,7 +274,9 @@ impl ChatMessage {
         Self {
             role: Role::System,
             content: MessageContent::Text(content.into()),
-            audio: None, tool_calls: None, tool_call_id: None,
+            audio: None,
+            tool_calls: None,
+            tool_call_id: None,
         }
     }
 
@@ -268,7 +285,9 @@ impl ChatMessage {
         Self {
             role: Role::User,
             content: MessageContent::Text(content.into()),
-            audio: None, tool_calls: None, tool_call_id: None,
+            audio: None,
+            tool_calls: None,
+            tool_call_id: None,
         }
     }
 
@@ -277,7 +296,9 @@ impl ChatMessage {
         Self {
             role: Role::Assistant,
             content: MessageContent::Text(content.into()),
-            audio: None, tool_calls: None, tool_call_id: None,
+            audio: None,
+            tool_calls: None,
+            tool_call_id: None,
         }
     }
 
@@ -305,7 +326,9 @@ impl ChatMessage {
                 ContentPart::text(text),
                 ContentPart::image_url(image_url),
             ]),
-            audio: None, tool_calls: None, tool_call_id: None,
+            audio: None,
+            tool_calls: None,
+            tool_call_id: None,
         }
     }
 
@@ -314,7 +337,9 @@ impl ChatMessage {
         Self {
             role,
             content: MessageContent::Parts(parts),
-            audio: None, tool_calls: None, tool_call_id: None,
+            audio: None,
+            tool_calls: None,
+            tool_call_id: None,
         }
     }
 }

@@ -1,12 +1,12 @@
 use async_trait::async_trait;
-use reqwest::{Client, header};
+use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
 use crate::error::BaochuanError;
 use crate::provider::{ChunkStream, Provider};
 use crate::providers::sse::dashscope_sse_to_chunks;
-use crate::types::{ChatMessage, ChatRequest, ChatResponse, ChatChoice, Role, Usage};
+use crate::types::{ChatChoice, ChatMessage, ChatRequest, ChatResponse, Role, Usage};
 
 const BASE_URL: &str = "https://dashscope.aliyuncs.com/api/v1";
 const CHAT_PATH: &str = "services/aigc/text-generation/generation";
@@ -96,20 +96,30 @@ fn to_dashscope_messages(messages: &[ChatMessage]) -> Vec<DashScopeMessage> {
 }
 
 fn from_dashscope_response(resp: DashScopeResponse, model: &str) -> ChatResponse {
-    let choices = resp.output.choices.into_iter().enumerate().map(|(i, c)| {
-        let role = if c.message.role == "assistant" { Role::Assistant } else { Role::User };
-        ChatChoice {
-            index: i as u32,
-            message: ChatMessage {
-                role,
-                content: c.message.content.into(),
-                audio: None,
-                tool_calls: None,
-                tool_call_id: None,
-            },
-            finish_reason: c.finish_reason,
-        }
-    }).collect();
+    let choices = resp
+        .output
+        .choices
+        .into_iter()
+        .enumerate()
+        .map(|(i, c)| {
+            let role = if c.message.role == "assistant" {
+                Role::Assistant
+            } else {
+                Role::User
+            };
+            ChatChoice {
+                index: i as u32,
+                message: ChatMessage {
+                    role,
+                    content: c.message.content.into(),
+                    audio: None,
+                    tool_calls: None,
+                    tool_call_id: None,
+                },
+                finish_reason: c.finish_reason,
+            }
+        })
+        .collect();
 
     let usage = resp.usage.map(|u| Usage {
         prompt_tokens: u.input_tokens,
@@ -229,7 +239,10 @@ impl Provider for QwenProvider {
         if !status.is_success() {
             let text = response.text().await.unwrap_or_default();
             error!(status = %status, body = %text, "DashScope API error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: text });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: text,
+            });
         }
 
         let ds_response: DashScopeResponse = response.json().await?;
@@ -255,10 +268,16 @@ impl Provider for QwenProvider {
         if !status.is_success() {
             let text = response.text().await.unwrap_or_default();
             error!(status = %status, body = %text, "DashScope stream error");
-            return Err(BaochuanError::Api { status: status.as_u16(), message: text });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: text,
+            });
         }
 
         let model = request.model.clone();
-        Ok(Box::pin(dashscope_sse_to_chunks(response.bytes_stream(), model)))
+        Ok(Box::pin(dashscope_sse_to_chunks(
+            response.bytes_stream(),
+            model,
+        )))
     }
 }

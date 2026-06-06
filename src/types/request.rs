@@ -1,8 +1,8 @@
 use serde::Serialize;
 
-use crate::error::BaochuanError;
 use super::message::ChatMessage;
 use super::tools::{Tool, ToolChoice};
+use crate::error::BaochuanError;
 
 // ── ChatRequest ───────────────────────────────────────────────────────────────
 
@@ -74,7 +74,10 @@ pub struct ChatRequestBuilder {
 
 impl ChatRequestBuilder {
     pub fn new(model: impl Into<String>) -> Self {
-        Self { model: Some(model.into()), ..Default::default() }
+        Self {
+            model: Some(model.into()),
+            ..Default::default()
+        }
     }
 
     pub fn message(mut self, message: ChatMessage) -> Self {
@@ -117,7 +120,10 @@ impl ChatRequestBuilder {
     /// Configure audio output for models that support it.
     /// Must be combined with `.modalities(["text", "audio"])`.
     pub fn audio_output(mut self, voice: impl Into<String>, format: impl Into<String>) -> Self {
-        self.audio_output = Some(AudioOutputConfig { voice: voice.into(), format: format.into() });
+        self.audio_output = Some(AudioOutputConfig {
+            voice: voice.into(),
+            format: format.into(),
+        });
         self
     }
 
@@ -140,9 +146,9 @@ impl ChatRequestBuilder {
     }
 
     pub fn build(self) -> Result<ChatRequest, BaochuanError> {
-        let model = self.model.ok_or_else(|| {
-            BaochuanError::InvalidRequest("model must be specified".to_string())
-        })?;
+        let model = self
+            .model
+            .ok_or_else(|| BaochuanError::InvalidRequest("model must be specified".to_string()))?;
 
         if self.messages.is_empty() {
             return Err(BaochuanError::InvalidRequest(
@@ -246,9 +252,15 @@ impl TtsRequestBuilder {
 
     pub fn build(self) -> Result<TtsRequest, BaochuanError> {
         Ok(TtsRequest {
-            model: self.model.ok_or_else(|| BaochuanError::InvalidRequest("model required".to_string()))?,
-            input: self.input.ok_or_else(|| BaochuanError::InvalidRequest("input required".to_string()))?,
-            voice: self.voice.ok_or_else(|| BaochuanError::InvalidRequest("voice required".to_string()))?,
+            model: self
+                .model
+                .ok_or_else(|| BaochuanError::InvalidRequest("model required".to_string()))?,
+            input: self
+                .input
+                .ok_or_else(|| BaochuanError::InvalidRequest("input required".to_string()))?,
+            voice: self
+                .voice
+                .ok_or_else(|| BaochuanError::InvalidRequest("voice required".to_string()))?,
             format: self.format,
             speed: self.speed,
         })

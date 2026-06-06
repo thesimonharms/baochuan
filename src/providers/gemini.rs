@@ -9,9 +9,9 @@ use crate::error::BaochuanError;
 use crate::provider::{ChunkStream, Provider};
 use crate::providers::helpers::{guess_image_mime_type, parse_data_url};
 use crate::types::{
-    ChatMessage, ChatRequest, ChatResponse, ChatChoice, ContentPart, Delta, DocumentInput,
-    FunctionCall, MessageContent, ModelInfo, Role, StreamChunk, StreamChoice, ToolCall,
-    ToolChoice, Usage,
+    ChatChoice, ChatMessage, ChatRequest, ChatResponse, ContentPart, Delta, DocumentInput,
+    FunctionCall, MessageContent, ModelInfo, Role, StreamChoice, StreamChunk, ToolCall, ToolChoice,
+    Usage,
 };
 
 const BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta";
@@ -188,38 +188,43 @@ struct GeminiUsageMetadata {
 fn content_to_gemini_parts(content: &MessageContent) -> Vec<GeminiPart> {
     match content {
         MessageContent::Text(s) => vec![GeminiPart::Text { text: s.clone() }],
-        MessageContent::Parts(parts) => parts.iter().map(|p| match p {
-            ContentPart::Text { text } => GeminiPart::Text { text: text.clone() },
-            ContentPart::ImageUrl { image_url } => {
-                if let Some((mime_type, data)) = parse_data_url(&image_url.url) {
-                    GeminiPart::InlineData { inline_data: GeminiInlineData { mime_type, data } }
-                } else {
-                    GeminiPart::FileData {
-                        file_data: GeminiFileData {
-                            mime_type: guess_image_mime_type(&image_url.url).to_string(),
-                            file_uri: image_url.url.clone(),
-                        },
+        MessageContent::Parts(parts) => parts
+            .iter()
+            .map(|p| match p {
+                ContentPart::Text { text } => GeminiPart::Text { text: text.clone() },
+                ContentPart::ImageUrl { image_url } => {
+                    if let Some((mime_type, data)) = parse_data_url(&image_url.url) {
+                        GeminiPart::InlineData {
+                            inline_data: GeminiInlineData { mime_type, data },
+                        }
+                    } else {
+                        GeminiPart::FileData {
+                            file_data: GeminiFileData {
+                                mime_type: guess_image_mime_type(&image_url.url).to_string(),
+                                file_uri: image_url.url.clone(),
+                            },
+                        }
                     }
                 }
-            }
-            ContentPart::InputAudio { input_audio } => {
-                GeminiPart::InlineData {
+                ContentPart::InputAudio { input_audio } => GeminiPart::InlineData {
                     inline_data: GeminiInlineData {
                         mime_type: input_audio.mime_type(),
                         data: input_audio.data.clone(),
                     },
+                },
+                ContentPart::Document {
+                    document: DocumentInput { data, media_type },
+                } => {
+                    // PDFs and other documents use inlineData on Gemini
+                    GeminiPart::InlineData {
+                        inline_data: GeminiInlineData {
+                            mime_type: media_type.clone(),
+                            data: data.clone(),
+                        },
+                    }
                 }
-            }
-            ContentPart::Document { document: DocumentInput { data, media_type } } => {
-                // PDFs and other documents use inlineData on Gemini
-                GeminiPart::InlineData {
-                    inline_data: GeminiInlineData {
-                        mime_type: media_type.clone(),
-                        data: data.clone(),
-                    },
-                }
-            }
-        }).collect(),
+            })
+            .collect(),
     }
 }
 
@@ -251,10 +256,16 @@ fn to_gemini_content(m: &ChatMessage) -> GeminiContent {
             let args: serde_json::Value =
                 serde_json::from_str(&tc.function.arguments).unwrap_or(serde_json::Value::Null);
             parts.push(GeminiPart::FunctionCall {
-                function_call: GeminiFunctionCallPart { name: tc.function.name.clone(), args },
+                function_call: GeminiFunctionCallPart {
+                    name: tc.function.name.clone(),
+                    args,
+                },
             });
         }
-        return GeminiContent { role: "model".to_string(), parts };
+        return GeminiContent {
+            role: "model".to_string(),
+            parts,
+        };
     }
 
     GeminiContent {
@@ -289,7 +300,9 @@ fn to_gemini_request(request: &ChatRequest) -> GeminiRequest {
             .messages
             .iter()
             .filter(|m| m.role == Role::System)
-            .map(|m| GeminiPart::Text { text: m.content.to_text_lossy() })
+            .map(|m| GeminiPart::Text {
+                text: m.content.to_text_lossy(),
+            })
             .collect();
         if parts.is_empty() {
             None
@@ -305,23 +318,25 @@ fn to_gemini_request(request: &ChatRequest) -> GeminiRequest {
         .map(to_gemini_content)
         .collect();
 
-    let generation_config =
-        if request.max_tokens.is_some() || request.temperature.is_some() {
-            Some(GeminiGenerationConfig {
-                max_output_tokens: request.max_tokens,
-                temperature: request.temperature,
-            })
-        } else {
-            None
-        };
+    let generation_config = if request.max_tokens.is_some() || request.temperature.is_some() {
+        Some(GeminiGenerationConfig {
+            max_output_tokens: request.max_tokens,
+            temperature: request.temperature,
+        })
+    } else {
+        None
+    };
 
     let tools = request.tools.as_ref().map(|tools| {
         vec![GeminiTools {
-            function_declarations: tools.iter().map(|t| GeminiFunctionDeclaration {
-                name: t.function.name.clone(),
-                description: t.function.description.clone(),
-                parameters: t.function.parameters.clone(),
-            }).collect(),
+            function_declarations: tools
+                .iter()
+                .map(|t| GeminiFunctionDeclaration {
+                    name: t.function.name.clone(),
+                    description: t.function.description.clone(),
+                    parameters: t.function.parameters.clone(),
+                })
+                .collect(),
         }]
     });
 
@@ -545,17 +560,28 @@ impl Provider for GeminiProvider {
         let status = response.status();
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(BaochuanError::Api { status: status.as_u16(), message: body });
+            return Err(BaochuanError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
         }
 
         let list: GeminiModelList = response.json().await?;
-        Ok(list.models.into_iter().map(|m| ModelInfo {
-            // Strip "models/" prefix → "gemini-1.5-flash"
-            id: m.name.strip_prefix("models/").unwrap_or(&m.name).to_string(),
-            owned_by: Some("google".to_string()),
-            context_length: m.input_token_limit,
-            display_name: m.display_name,
-        }).collect())
+        Ok(list
+            .models
+            .into_iter()
+            .map(|m| ModelInfo {
+                // Strip "models/" prefix → "gemini-1.5-flash"
+                id: m
+                    .name
+                    .strip_prefix("models/")
+                    .unwrap_or(&m.name)
+                    .to_string(),
+                owned_by: Some("google".to_string()),
+                context_length: m.input_token_limit,
+                display_name: m.display_name,
+            })
+            .collect())
     }
 
     async fn chat(&self, request: &ChatRequest) -> Result<ChatResponse, BaochuanError> {
@@ -606,6 +632,9 @@ impl Provider for GeminiProvider {
         }
 
         let model = request.model.clone();
-        Ok(Box::pin(gemini_sse_to_chunks(response.bytes_stream(), model)))
+        Ok(Box::pin(gemini_sse_to_chunks(
+            response.bytes_stream(),
+            model,
+        )))
     }
 }

@@ -89,11 +89,17 @@ pub enum ToolChoice {
 
 impl ToolChoice {
     /// Let the model decide whether to call a tool.
-    pub fn auto() -> Self { ToolChoice::Preset(ToolChoicePreset::Auto) }
+    pub fn auto() -> Self {
+        ToolChoice::Preset(ToolChoicePreset::Auto)
+    }
     /// The model must call at least one tool.
-    pub fn required() -> Self { ToolChoice::Preset(ToolChoicePreset::Required) }
+    pub fn required() -> Self {
+        ToolChoice::Preset(ToolChoicePreset::Required)
+    }
     /// The model must not call any tool.
-    pub fn none() -> Self { ToolChoice::Preset(ToolChoicePreset::None) }
+    pub fn none() -> Self {
+        ToolChoice::Preset(ToolChoicePreset::None)
+    }
     /// Force the model to call a specific function by name.
     pub fn function(name: impl Into<String>) -> Self {
         ToolChoice::Function(ToolChoiceFunction {

@@ -3,8 +3,8 @@ use futures_util::{Stream, StreamExt};
 use tracing::error;
 
 use crate::error::BaochuanError;
-use crate::types::{StreamChunk, StreamChoice, Delta};
-use crate::types::response::{AnthropicStreamEvent, AnthropicStreamDelta};
+use crate::types::response::{AnthropicStreamDelta, AnthropicStreamEvent};
+use crate::types::{Delta, StreamChoice, StreamChunk};
 
 /// Parse a raw byte stream of OpenAI-compatible SSE `data:` lines into [`StreamChunk`]s.
 ///
@@ -101,9 +101,7 @@ where
 
                     match current_event.as_str() {
                         "message_start" => {
-                            if let Ok(event) =
-                                serde_json::from_str::<AnthropicStreamEvent>(data)
-                            {
+                            if let Ok(event) = serde_json::from_str::<AnthropicStreamEvent>(data) {
                                 if let Some(msg) = event.message {
                                     message_id = msg.id.unwrap_or_default();
                                     model = msg.model.unwrap_or_default();
@@ -111,9 +109,7 @@ where
                             }
                         }
                         "content_block_delta" => {
-                            if let Ok(event) =
-                                serde_json::from_str::<AnthropicStreamEvent>(data)
-                            {
+                            if let Ok(event) = serde_json::from_str::<AnthropicStreamEvent>(data) {
                                 if let Some(AnthropicStreamDelta {
                                     delta_type: Some(ref t),
                                     text: Some(ref text),
@@ -217,7 +213,11 @@ where
                                 model: model.clone(),
                                 choices: vec![StreamChoice {
                                     index: 0,
-                                    delta: Delta { role: None, content: cf.response, tool_calls: None },
+                                    delta: Delta {
+                                        role: None,
+                                        content: cf.response,
+                                        tool_calls: None,
+                                    },
                                     finish_reason: None,
                                 }],
                             }));
@@ -294,7 +294,11 @@ where
                     let line = buffer[..newline_pos].trim().to_string();
                     buffer.drain(..=newline_pos);
 
-                    if line.is_empty() || line.starts_with("id:") || line.starts_with("event:") || line.starts_with(':') {
+                    if line.is_empty()
+                        || line.starts_with("id:")
+                        || line.starts_with("event:")
+                        || line.starts_with(':')
+                    {
                         continue;
                     }
 
@@ -306,7 +310,9 @@ where
                     match serde_json::from_str::<DashScopeStreamPayload>(data) {
                         Ok(payload) => {
                             if let Some(choice) = payload.output.choices.into_iter().next() {
-                                let done = choice.finish_reason.as_deref()
+                                let done = choice
+                                    .finish_reason
+                                    .as_deref()
                                     .map(|r| r != "null")
                                     .unwrap_or(false);
                                 let finish_reason = if done {
@@ -322,7 +328,11 @@ where
                                         index: 0,
                                         delta: Delta {
                                             role: None,
-                                            content: if content.is_empty() { None } else { Some(content) },
+                                            content: if content.is_empty() {
+                                                None
+                                            } else {
+                                                Some(content)
+                                            },
                                             tool_calls: None,
                                         },
                                         finish_reason,

@@ -20,19 +20,22 @@ pub(crate) fn parse_data_url(url: &str) -> Option<(String, String)> {
 /// Defaults to `"image/jpeg"` for unknown extensions.
 pub(crate) fn guess_image_mime_type(url: &str) -> &'static str {
     let lower = url.to_lowercase();
-    if lower.contains(".png") { "image/png" }
-    else if lower.contains(".gif") { "image/gif" }
-    else if lower.contains(".webp") { "image/webp" }
-    else { "image/jpeg" }
+    if lower.contains(".png") {
+        "image/png"
+    } else if lower.contains(".gif") {
+        "image/gif"
+    } else if lower.contains(".webp") {
+        "image/webp"
+    } else {
+        "image/jpeg"
+    }
 }
 
 /// Fetch a model list from an OpenAI-compatible `GET /v1/models` endpoint.
 ///
 /// `build_request` receives the `Client` and must return a configured
 /// `RequestBuilder` (with auth headers, URL, etc.) ready to `.send()`.
-pub async fn fetch_openai_models(
-    request: RequestBuilder,
-) -> Result<Vec<ModelInfo>, BaochuanError> {
+pub async fn fetch_openai_models(request: RequestBuilder) -> Result<Vec<ModelInfo>, BaochuanError> {
     let response = request.send().await?;
 
     let status = response.status();
@@ -48,4 +51,3 @@ pub async fn fetch_openai_models(
     let list: OpenAIModelList = response.json().await?;
     Ok(list.data.into_iter().map(ModelInfo::from).collect())
 }
-
