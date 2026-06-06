@@ -45,6 +45,7 @@ In the early 15th century, Admiral **Zheng He** commanded the largest wooden fle
 | [OpenRouter](https://openrouter.ai/) | ✅ | ✅ | ✅ | OpenRouter native | `OPENROUTER_API_KEY` |
 | [Moonshot AI / Kimi](https://platform.moonshot.cn/) | ✅ | ✅ | ✅ | Moonshot native | `MOONSHOT_API_KEY` |
 | [Perplexity](https://www.perplexity.ai/) | ✅ | ✅ | ✅ | Perplexity native | `PERPLEXITY_API_KEY` |
+| [Nous Portal](https://portal.nousresearch.com/) | ✅ | ✅ | ✅ | OpenAI-compatible | `NOUS_API_KEY` |
 | [Alibaba Qwen](https://dashscope.aliyun.com/) | ✅ | ✅ | — | DashScope native | `DASHSCOPE_API_KEY` |
 | [Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/) | ✅ | ✅ | ✅ | CF native `/ai/run/` | `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` |
 | [LM Studio](https://lmstudio.ai/) | ✅ | ✅ | ✅ | LM Studio `/api/v0/` | _(none)_ |
@@ -82,6 +83,27 @@ async fn main() {
     let request = ChatRequestBuilder::new("deepseek-chat")
         .message(ChatMessage::user("Tell me about the treasure ships of Zheng He."))
         .max_tokens(512)
+        .build()
+        .unwrap();
+
+    let response = provider.chat(&request).await.unwrap();
+    println!("{}", response.content().unwrap_or("(no response)"));
+}
+```
+
+### Nous Portal
+
+```rust
+use baochuan::{providers::NousProvider, ChatMessage, ChatRequestBuilder, Provider};
+
+#[tokio::main]
+async fn main() {
+    let provider = NousProvider::new(
+        std::env::var("NOUS_API_KEY").expect("NOUS_API_KEY not set"),
+    );
+
+    let request = ChatRequestBuilder::new("Hermes-4-405B")
+        .message(ChatMessage::user("Carry the Zheng He voyage onward."))
         .build()
         .unwrap();
 

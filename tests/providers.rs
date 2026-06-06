@@ -10,8 +10,8 @@
 use baochuan::{
     providers::{
         AnthropicProvider, CloudflareProvider, DeepSeekProvider, GeminiProvider, GrokProvider,
-        LlamaCppProvider, LmStudioProvider, MistralProvider, MoonshotProvider, OllamaProvider,
-        OpenAIProvider, OpenRouterProvider, PerplexityProvider, QwenProvider,
+        LlamaCppProvider, LmStudioProvider, MistralProvider, MoonshotProvider, NousProvider,
+        OllamaProvider, OpenAIProvider, OpenRouterProvider, PerplexityProvider, QwenProvider,
     },
     AudioInput, ChatMessage, ChatRequestBuilder, ContentPart, FunctionDefinition, MessageContent,
     Provider, Tool, ToolCall, ToolChoice, TtsRequestBuilder,
@@ -876,6 +876,60 @@ async fn test_moonshot_models() {
 #[test]
 fn test_moonshot_provider_name() {
     assert_eq!(MoonshotProvider::new("k").name(), "moonshot");
+}
+
+// ── Nous Portal ────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_nous_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("POST", "/v1/chat/completions")
+        .match_header("authorization", "Bearer nous-test")
+        .match_body(mockito::Matcher::Regex("Hermes-4-405B".to_string()))
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = NousProvider::new("nous-test").with_base_url(server.url() + "/v1");
+    let req = ChatRequestBuilder::new("Hermes-4-405B")
+        .message(ChatMessage::user("Capital of France?"))
+        .build()
+        .unwrap();
+
+    let response = provider.chat(&req).await.unwrap();
+    assert_eq!(response.content(), Some("Paris."));
+    mock.assert_async().await;
+}
+
+#[tokio::test]
+async fn test_nous_models() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("GET", "/v1/models")
+        .match_header("authorization", "Bearer nous-test")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(
+            r#"{"object":"list","data":[
+            {"id":"Hermes-4-405B","object":"model","owned_by":"nousresearch"},
+            {"id":"Hermes-4-70B","object":"model","owned_by":"nousresearch"}
+        ]}"#,
+        )
+        .create_async()
+        .await;
+
+    let provider = NousProvider::new("nous-test").with_base_url(server.url() + "/v1");
+    let models = provider.models().await.unwrap();
+    assert_eq!(models.len(), 2);
+    assert_eq!(models[0].id, "Hermes-4-405B");
+}
+
+#[test]
+fn test_nous_provider_name() {
+    assert_eq!(NousProvider::new("k").name(), "nous");
 }
 
 // ── Cloudflare Workers AI ─────────────────────────────────────────────────────
