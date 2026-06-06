@@ -33,12 +33,18 @@
 //! }
 //! ```
 
+pub mod agent;
 pub mod error;
 pub mod provider;
 pub mod providers;
 pub mod types;
 
 // Top-level re-exports for ergonomic use
+pub use agent::{
+    AgentEvent, AgentEventStream, AgentInput, AgentInputContent, AgentInputContentPart,
+    AgentInputItem, AgentOutputContent, AgentOutputItem, AgentProvider, AgentResponse,
+    AgentRunRequest, AgentRunRequestBuilder, AgentUsage,
+};
 pub use error::BaochuanError;
 pub use provider::Provider;
 pub use types::{

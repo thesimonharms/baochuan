@@ -27,7 +27,8 @@ In the early 15th century, Admiral **Zheng He** commanded the largest wooden fle
 - **Streaming** — native SSE streaming support for real-time token delivery
 - **Builder pattern** — ergonomic, validated request construction
 - **Own implementation** — no third-party SDK wrappers; direct HTTP to each provider
-- **Extensible** — implement the `Provider` trait to add any provider
+- **Extensible** — implement the `Provider` trait to add any model provider
+- **Agent runtimes** — optional `AgentProvider` trait for stateful agent APIs such as Hermes Agent
 
 ---
 
@@ -51,6 +52,7 @@ In the early 15th century, Admiral **Zheng He** commanded the largest wooden fle
 | [LM Studio](https://lmstudio.ai/) | ✅ | ✅ | ✅ | LM Studio `/api/v0/` | _(none)_ |
 | [Ollama](https://ollama.com/) | ✅ | ✅ | ✅ | Ollama `/api/` | _(none)_ |
 | [llama.cpp](https://github.com/ggerganov/llama.cpp) | ✅ | ✅ | ✅ | llama-server `/v1/` | _(none)_ |
+| [Hermes Agent API](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server) | ✅ | ✅ | — | Responses `/v1/responses` | `API_SERVER_KEY` |
 | More coming… | — | — | — | — | — |
 
 ---
@@ -182,6 +184,28 @@ async fn ask(provider: &dyn Provider, model: &str, question: &str) -> String {
         .content()
         .unwrap_or("")
         .to_string()
+}
+```
+
+### AgentProvider for Hermes Agent
+
+```rust
+use baochuan::{providers::HermesAgentProvider, AgentProvider, AgentRunRequestBuilder};
+
+#[tokio::main]
+async fn main() {
+    let provider = HermesAgentProvider::new(
+        std::env::var("API_SERVER_KEY").expect("API_SERVER_KEY not set"),
+    );
+
+    let request = AgentRunRequestBuilder::new("hermes-agent", "What files are in my project?")
+        .instructions("You are a helpful coding assistant.")
+        .store(true)
+        .build()
+        .unwrap();
+
+    let response = provider.run(&request).await.unwrap();
+    println!("{}", response.output_text());
 }
 ```
 

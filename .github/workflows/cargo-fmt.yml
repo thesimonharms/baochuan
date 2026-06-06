@@ -1,0 +1,40 @@
+name: Cargo fmt
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cargo-fmt:
+    name: Run cargo fmt
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install stable Rust toolchain with rustfmt
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Format Rust code
+        if: github.event_name != 'pull_request'
+        run: cargo fmt --all
+
+      - name: Commit formatting changes
+        if: github.event_name != 'pull_request'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: run cargo fmt"
+          file_pattern: "*.rs"
+
+      - name: Check formatting on pull requests
+        if: github.event_name == 'pull_request'
+        run: cargo fmt --all -- --check
