@@ -9,16 +9,24 @@ const DEFAULT_BASE_URL: &str = "https://api.deepseek.com/v1";
 
 /// A provider that connects to the [DeepSeek](https://platform.deepseek.com/) API.
 ///
+/// Current models are `deepseek-v4-flash` and `deepseek-v4-pro`. Use
+/// [`ChatRequestBuilder::thinking`](crate::types::ChatRequestBuilder::thinking) and
+/// [`reasoning_effort`](crate::types::ChatRequestBuilder::reasoning_effort) to
+/// control chain-of-thought generation. Legacy aliases `deepseek-chat` /
+/// `deepseek-reasoner` were retired in July 2026.
+///
 /// # Example
 /// ```rust,no_run
 /// use baochuan::{providers::DeepSeekProvider, ChatMessage, ChatRequestBuilder, Provider};
+/// use baochuan::ThinkingConfig;
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///     let provider = DeepSeekProvider::new(std::env::var("DEEPSEEK_API_KEY").unwrap());
 ///
-///     let request = ChatRequestBuilder::new("deepseek-chat")
+///     let request = ChatRequestBuilder::new("deepseek-v4-flash")
 ///         .message(ChatMessage::user("What is the capital of France?"))
+///         .thinking(ThinkingConfig::disabled())
 ///         .build()
 ///         .unwrap();
 ///

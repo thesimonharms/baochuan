@@ -7,10 +7,12 @@ use crate::types::{ChatRequest, ChatResponse, ModelInfo};
 
 const DEFAULT_BASE_URL: &str = "https://api.x.ai/v1";
 
-/// A provider that connects to [xAI Grok](https://console.x.ai/).
+/// A provider that connects to [xAI Grok](https://docs.x.ai/).
 ///
-/// The Grok API is OpenAI-compatible. Notable models include `grok-3` and
-/// `grok-3-mini`.
+/// Uses the OpenAI-compatible Chat Completions API at `api.x.ai/v1`. Current
+/// flagship models include `grok-4.5` and `grok-4.3`. Use
+/// [`ChatRequestBuilder::reasoning_effort`](crate::types::ChatRequestBuilder::reasoning_effort)
+/// to tune reasoning depth where supported.
 ///
 /// # Example
 /// ```rust,no_run
@@ -20,7 +22,7 @@ const DEFAULT_BASE_URL: &str = "https://api.x.ai/v1";
 /// async fn main() {
 ///     let provider = GrokProvider::new(std::env::var("XAI_API_KEY").unwrap());
 ///
-///     let request = ChatRequestBuilder::new("grok-3")
+///     let request = ChatRequestBuilder::new("grok-4.5")
 ///         .message(ChatMessage::user("What is the capital of France?"))
 ///         .build()
 ///         .unwrap();

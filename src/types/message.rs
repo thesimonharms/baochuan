@@ -248,6 +248,10 @@ pub struct ChatMessage {
     /// provider returns `null` (e.g. GPT-4o audio-only responses).
     #[serde(default, deserialize_with = "deser_nullable_content")]
     pub content: MessageContent,
+    /// Chain-of-thought / reasoning text returned by thinking models
+    /// (DeepSeek V4, Kimi, etc.). Not sent back unless you explicitly set it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reasoning_content: Option<String>,
     /// Audio output, present only when a model produces audio (e.g. GPT-4o
     /// with `modalities: ["audio"]`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -274,6 +278,7 @@ impl ChatMessage {
         Self {
             role: Role::System,
             content: MessageContent::Text(content.into()),
+            reasoning_content: None,
             audio: None,
             tool_calls: None,
             tool_call_id: None,
@@ -285,6 +290,7 @@ impl ChatMessage {
         Self {
             role: Role::User,
             content: MessageContent::Text(content.into()),
+            reasoning_content: None,
             audio: None,
             tool_calls: None,
             tool_call_id: None,
@@ -296,6 +302,7 @@ impl ChatMessage {
         Self {
             role: Role::Assistant,
             content: MessageContent::Text(content.into()),
+            reasoning_content: None,
             audio: None,
             tool_calls: None,
             tool_call_id: None,
@@ -312,6 +319,7 @@ impl ChatMessage {
             content: MessageContent::Text(content.into()),
             tool_call_id: Some(tool_call_id.into()),
             tool_calls: None,
+            reasoning_content: None,
             audio: None,
         }
     }
@@ -326,6 +334,7 @@ impl ChatMessage {
                 ContentPart::text(text),
                 ContentPart::image_url(image_url),
             ]),
+            reasoning_content: None,
             audio: None,
             tool_calls: None,
             tool_call_id: None,
@@ -337,6 +346,7 @@ impl ChatMessage {
         Self {
             role,
             content: MessageContent::Parts(parts),
+            reasoning_content: None,
             audio: None,
             tool_calls: None,
             tool_call_id: None,

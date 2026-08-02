@@ -71,6 +71,28 @@ fn test_builder_produces_valid_request() {
 }
 
 #[test]
+fn test_builder_thinking_and_reasoning_effort() {
+    use baochuan::ThinkingConfig;
+
+    let req = ChatRequestBuilder::new("deepseek-v4-flash")
+        .message(ChatMessage::user("Solve it."))
+        .thinking(ThinkingConfig::enabled())
+        .reasoning_effort("high")
+        .max_completion_tokens(1024)
+        .build()
+        .unwrap();
+
+    assert_eq!(req.thinking.as_ref().unwrap().thinking_type, "enabled");
+    assert_eq!(req.reasoning_effort.as_deref(), Some("high"));
+    assert_eq!(req.max_completion_tokens, Some(1024));
+
+    let json = serde_json::to_value(&req).unwrap();
+    assert_eq!(json["thinking"]["type"], "enabled");
+    assert_eq!(json["reasoning_effort"], "high");
+    assert_eq!(json["max_completion_tokens"], 1024);
+}
+
+#[test]
 fn test_builder_requires_messages() {
     let err = ChatRequestBuilder::new("gpt-4o").build().unwrap_err();
     assert!(err.to_string().contains("message"));
@@ -860,8 +882,8 @@ async fn test_moonshot_models() {
         .with_header("content-type", "application/json")
         .with_body(
             r#"{"object":"list","data":[
-            {"id":"moonshot-v1-8k","object":"model","owned_by":"moonshot"},
-            {"id":"moonshot-v1-128k","object":"model","owned_by":"moonshot"}
+            {"id":"kimi-k3","object":"model","owned_by":"moonshot"},
+            {"id":"kimi-k2.6","object":"model","owned_by":"moonshot"}
         ]}"#,
         )
         .create_async()
@@ -870,7 +892,7 @@ async fn test_moonshot_models() {
     let provider = MoonshotProvider::new("sk-moon").with_base_url(server.url() + "/v1");
     let models = provider.models().await.unwrap();
     assert_eq!(models.len(), 2);
-    assert_eq!(models[0].id, "moonshot-v1-8k");
+    assert_eq!(models[0].id, "kimi-k3");
 }
 
 #[test]
@@ -1064,7 +1086,7 @@ async fn test_perplexity_chat_with_citations() {
         .with_body(
             r#"{
             "id": "ppl-test",
-            "model": "llama-3.1-sonar-small-128k-online",
+            "model": "sonar-pro",
             "choices": [{
                 "index": 0,
                 "message": {"role": "assistant", "content": "Paris is the capital of France."},
@@ -1094,8 +1116,8 @@ async fn test_perplexity_models() {
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"data":[
-            {"id":"llama-3.1-sonar-small-128k-online","owned_by":"perplexity","context_length":127072},
-            {"id":"llama-3.1-sonar-large-128k-online","owned_by":"perplexity","context_length":127072}
+            {"id":"sonar","owned_by":"perplexity","context_length":127072},
+            {"id":"sonar-pro","owned_by":"perplexity","context_length":200000}
         ]}"#)
         .create_async()
         .await;
@@ -1104,7 +1126,7 @@ async fn test_perplexity_models() {
     let models = provider.models().await.unwrap();
 
     assert_eq!(models.len(), 2);
-    assert_eq!(models[0].id, "llama-3.1-sonar-small-128k-online");
+    assert_eq!(models[0].id, "sonar");
     assert_eq!(models[0].context_length, Some(127_072));
 }
 
@@ -1117,7 +1139,7 @@ async fn test_perplexity_no_citations_when_absent() {
         .with_header("content-type", "application/json")
         .with_body(r#"{
             "id": "ppl-test2",
-            "model": "llama-3.1-sonar-small-128k-chat",
+            "model": "sonar",
             "choices": [{"index":0,"message":{"role":"assistant","content":"Paris."},"finish_reason":"stop"}],
             "usage": {"prompt_tokens": 5, "completion_tokens": 1, "total_tokens": 6}
         }"#)
@@ -1135,68 +1157,71 @@ fn test_perplexity_provider_name() {
     assert_eq!(PerplexityProvider::new("k").name(), "perplexity");
 }
 
-// ── Qwen / DashScope ──────────────────────────────────────────────────────────
-
-fn qwen_chat_response_body() -> &'static str {
-    r#"{
-        "output": {
-            "choices": [{
-                "message": {"role": "assistant", "content": "Paris."},
-                "finish_reason": "stop"
-            }]
-        },
-        "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12},
-        "request_id": "qwen-req-1"
-    }"#
-}
+// ── Qwen / DashScope (OpenAI-compatible mode) ─────────────────────────────────
 
 #[tokio::test]
 async fn test_qwen_chat_success() {
     let mut server = mockito::Server::new_async().await;
     server
-        .mock("POST", "/api/v1/services/aigc/text-generation/generation")
+        .mock("POST", "/compatible-mode/v1/chat/completions")
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(qwen_chat_response_body())
+        .with_body(openai_success_body())
         .create_async()
         .await;
 
-    let provider = QwenProvider::new("sk-dashscope").with_base_url(server.url() + "/api/v1");
+    let provider =
+        QwenProvider::new("sk-dashscope").with_base_url(server.url() + "/compatible-mode/v1");
 
     let response = provider.chat(&simple_request()).await.unwrap();
     assert_eq!(response.content(), Some("Paris."));
-    assert_eq!(response.id, "qwen-req-1");
-    let usage = response.usage.unwrap();
-    assert_eq!(usage.total_tokens, 12);
+}
+
+#[tokio::test]
+async fn test_qwen_models() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("GET", "/compatible-mode/v1/models")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"data":[
+            {"id":"qwen-plus","object":"model","owned_by":"alibaba"},
+            {"id":"qwen-max","object":"model","owned_by":"alibaba"}
+        ]}"#)
+        .create_async()
+        .await;
+
+    let provider =
+        QwenProvider::new("sk-dashscope").with_base_url(server.url() + "/compatible-mode/v1");
+    let models = provider.models().await.unwrap();
+
+    assert_eq!(models.len(), 2);
+    assert_eq!(models[0].id, "qwen-plus");
 }
 
 #[tokio::test]
 async fn test_qwen_stream_chat() {
     let sse_body = concat!(
-        "id:1\n",
-        "event:result\n",
-        ":HTTP_STATUS/200\n",
-        "data:{\"output\":{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"Par\"},\"finish_reason\":\"null\"}]},\"usage\":{\"input_tokens\":10,\"output_tokens\":1,\"total_tokens\":11},\"request_id\":\"r1\"}\n",
+        "data: {\"id\":\"q1\",\"model\":\"qwen-plus\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Par\"},\"finish_reason\":null}]}\n",
         "\n",
-        "id:2\n",
-        "event:result\n",
-        ":HTTP_STATUS/200\n",
-        "data:{\"output\":{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"is.\"},\"finish_reason\":\"stop\"}]},\"usage\":{\"input_tokens\":10,\"output_tokens\":3,\"total_tokens\":13},\"request_id\":\"r1\"}\n",
+        "data: {\"id\":\"q1\",\"model\":\"qwen-plus\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"is.\"},\"finish_reason\":\"stop\"}]}\n",
         "\n",
+        "data: [DONE]\n",
     );
 
     let mut server = mockito::Server::new_async().await;
     server
-        .mock("POST", "/api/v1/services/aigc/text-generation/generation")
+        .mock("POST", "/compatible-mode/v1/chat/completions")
         .with_status(200)
         .with_header("content-type", "text/event-stream")
         .with_body(sse_body)
         .create_async()
         .await;
 
-    let provider = QwenProvider::new("sk-dashscope").with_base_url(server.url() + "/api/v1");
+    let provider =
+        QwenProvider::new("sk-dashscope").with_base_url(server.url() + "/compatible-mode/v1");
 
-    let req = ChatRequestBuilder::new("qwen-turbo")
+    let req = ChatRequestBuilder::new("qwen-plus")
         .message(ChatMessage::user("test"))
         .build()
         .unwrap();

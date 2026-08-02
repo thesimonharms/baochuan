@@ -26,7 +26,7 @@ struct GeminiModelList {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct GeminiModelEntry {
-    /// e.g. "models/gemini-1.5-flash"
+    /// e.g. "models/gemini-2.5-flash"
     name: String,
     display_name: Option<String>,
     input_token_limit: Option<u32>,
@@ -485,7 +485,7 @@ fn gemini_sse_to_chunks(
 ///
 /// The Gemini API uses a different request/response format from OpenAI-compatible
 /// providers. baochuan handles the conversion automatically. Authentication uses
-/// an API key passed as a query parameter rather than a Bearer token.
+/// the `x-goog-api-key` header (query-string `?key=` is no longer preferred).
 ///
 /// # Example
 /// ```rust,no_run
@@ -495,7 +495,7 @@ fn gemini_sse_to_chunks(
 /// async fn main() {
 ///     let provider = GeminiProvider::new(std::env::var("GEMINI_API_KEY").unwrap());
 ///
-///     let request = ChatRequestBuilder::new("gemini-1.5-flash")
+///     let request = ChatRequestBuilder::new("gemini-2.5-flash")
 ///         .message(ChatMessage::user("What is the capital of France?"))
 ///         .build()
 ///         .unwrap();
@@ -533,17 +533,18 @@ impl GeminiProvider {
     }
 
     fn generate_url(&self, model: &str) -> String {
-        format!(
-            "{}/models/{}:generateContent?key={}",
-            self.base_url, model, self.api_key
-        )
+        format!("{}/models/{}:generateContent", self.base_url, model)
     }
 
     fn stream_url(&self, model: &str) -> String {
         format!(
-            "{}/models/{}:streamGenerateContent?alt=sse&key={}",
-            self.base_url, model, self.api_key
+            "{}/models/{}:streamGenerateContent?alt=sse",
+            self.base_url, model
         )
+    }
+
+    fn auth(&self, builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        builder.header("x-goog-api-key", &self.api_key)
     }
 }
 
@@ -554,8 +555,8 @@ impl Provider for GeminiProvider {
     }
 
     async fn models(&self) -> Result<Vec<ModelInfo>, BaochuanError> {
-        let url = format!("{}/models?key={}", self.base_url, self.api_key);
-        let response = self.client.get(&url).send().await?;
+        let url = format!("{}/models", self.base_url);
+        let response = self.auth(self.client.get(&url)).send().await?;
 
         let status = response.status();
         if !status.is_success() {
@@ -571,7 +572,7 @@ impl Provider for GeminiProvider {
             .models
             .into_iter()
             .map(|m| ModelInfo {
-                // Strip "models/" prefix → "gemini-1.5-flash"
+                // Strip "models/" prefix → "gemini-2.5-flash"
                 id: m
                     .name
                     .strip_prefix("models/")
@@ -589,8 +590,7 @@ impl Provider for GeminiProvider {
 
         let body = to_gemini_request(request);
         let response = self
-            .client
-            .post(self.generate_url(&request.model))
+            .auth(self.client.post(self.generate_url(&request.model)))
             .json(&body)
             .send()
             .await?;
@@ -615,8 +615,7 @@ impl Provider for GeminiProvider {
 
         let body = to_gemini_request(request);
         let response = self
-            .client
-            .post(self.stream_url(&request.model))
+            .auth(self.client.post(self.stream_url(&request.model)))
             .json(&body)
             .send()
             .await?;

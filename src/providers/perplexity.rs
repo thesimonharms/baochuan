@@ -40,9 +40,9 @@ struct PerplexityModel {
 
 /// A provider that connects to the [Perplexity AI](https://www.perplexity.ai/) API.
 ///
-/// Perplexity's native API follows the OpenAI chat completions format, with
-/// one important addition: **online/search-augmented models** (e.g.
-/// `llama-3.1-sonar-small-128k-online`) include a `citations` array of source
+/// Perplexity's Sonar API follows the OpenAI chat completions format (also
+/// available at `POST /v1/sonar`), with one important addition: search-augmented
+/// models such as `sonar` and `sonar-pro` include a `citations` array of source
 /// URLs in the response. These are surfaced via [`ChatResponse::citations`].
 ///
 /// # Example
@@ -53,7 +53,7 @@ struct PerplexityModel {
 /// async fn main() {
 ///     let provider = PerplexityProvider::new(std::env::var("PERPLEXITY_API_KEY").unwrap());
 ///
-///     let request = ChatRequestBuilder::new("llama-3.1-sonar-small-128k-online")
+///     let request = ChatRequestBuilder::new("sonar-pro")
 ///         .message(ChatMessage::user("What happened in the news today?"))
 ///         .build()
 ///         .unwrap();

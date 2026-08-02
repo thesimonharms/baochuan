@@ -1,8 +1,43 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::message::ChatMessage;
 use super::tools::{Tool, ToolChoice};
 use crate::error::BaochuanError;
+
+// ── ThinkingConfig ────────────────────────────────────────────────────────────
+
+/// Controls whether a reasoning/thinking model should produce chain-of-thought
+/// tokens (DeepSeek V4, Kimi, and similar OpenAI-compatible APIs).
+///
+/// # Example
+/// ```rust
+/// use baochuan::types::{ChatMessage, ChatRequestBuilder, ThinkingConfig};
+///
+/// let request = ChatRequestBuilder::new("deepseek-v4-flash")
+///     .message(ChatMessage::user("Solve 2+2."))
+///     .thinking(ThinkingConfig::enabled())
+///     .reasoning_effort("high")
+///     .build()
+///     .unwrap();
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThinkingConfig {
+    /// `"enabled"` or `"disabled"`.
+    #[serde(rename = "type")]
+    pub thinking_type: String,
+}
+
+impl ThinkingConfig {
+    /// Enable thinking / chain-of-thought generation.
+    pub fn enabled() -> Self {
+        Self { thinking_type: "enabled".to_string() }
+    }
+
+    /// Disable thinking (non-reasoning chat mode).
+    pub fn disabled() -> Self {
+        Self { thinking_type: "disabled".to_string() }
+    }
+}
 
 // ── ChatRequest ───────────────────────────────────────────────────────────────
 
@@ -14,6 +49,12 @@ pub struct ChatRequest {
     pub stream: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_tokens: Option<u32>,
+    /// Preferred token limit for OpenAI (including o-series / reasoning models).
+    /// When set, [`OpenAIProvider`](crate::providers::OpenAIProvider) sends this
+    /// instead of `max_tokens`. Other OpenAI-compatible providers that understand
+    /// the field will receive it as-is.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_completion_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -33,6 +74,13 @@ pub struct ChatRequest {
     /// tools are provided.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<ToolChoice>,
+    /// Enable or disable thinking mode (DeepSeek V4, Kimi, etc.).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<ThinkingConfig>,
+    /// Reasoning effort hint (`"low"`, `"medium"`, `"high"`, `"max"`) for
+    /// providers that support it (DeepSeek, xAI, OpenAI reasoning models, …).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning_effort: Option<String>,
 }
 
 /// Configuration for audio output in a chat completion (GPT-4o audio).
@@ -52,7 +100,7 @@ pub struct AudioOutputConfig {
 /// ```rust
 /// use baochuan::types::{ChatMessage, ChatRequestBuilder};
 ///
-/// let request = ChatRequestBuilder::new("deepseek-chat")
+/// let request = ChatRequestBuilder::new("deepseek-v4-flash")
 ///     .message(ChatMessage::user("Hello!"))
 ///     .max_tokens(512)
 ///     .build()
@@ -64,12 +112,15 @@ pub struct ChatRequestBuilder {
     messages: Vec<ChatMessage>,
     stream: bool,
     max_tokens: Option<u32>,
+    max_completion_tokens: Option<u32>,
     temperature: Option<f32>,
     top_p: Option<f32>,
     modalities: Option<Vec<String>>,
     audio_output: Option<AudioOutputConfig>,
     tools: Option<Vec<Tool>>,
     tool_choice: Option<ToolChoice>,
+    thinking: Option<ThinkingConfig>,
+    reasoning_effort: Option<String>,
 }
 
 impl ChatRequestBuilder {
@@ -97,6 +148,12 @@ impl ChatRequestBuilder {
 
     pub fn max_tokens(mut self, max_tokens: u32) -> Self {
         self.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Set `max_completion_tokens` (preferred by OpenAI, including o-series).
+    pub fn max_completion_tokens(mut self, max_completion_tokens: u32) -> Self {
+        self.max_completion_tokens = Some(max_completion_tokens);
         self
     }
 
@@ -145,6 +202,18 @@ impl ChatRequestBuilder {
         self
     }
 
+    /// Enable or disable thinking mode for reasoning models (DeepSeek V4, Kimi, …).
+    pub fn thinking(mut self, thinking: ThinkingConfig) -> Self {
+        self.thinking = Some(thinking);
+        self
+    }
+
+    /// Set reasoning effort (`"low"`, `"medium"`, `"high"`, `"max"`).
+    pub fn reasoning_effort(mut self, effort: impl Into<String>) -> Self {
+        self.reasoning_effort = Some(effort.into());
+        self
+    }
+
     pub fn build(self) -> Result<ChatRequest, BaochuanError> {
         let model = self
             .model
@@ -161,12 +230,15 @@ impl ChatRequestBuilder {
             messages: self.messages,
             stream: self.stream,
             max_tokens: self.max_tokens,
+            max_completion_tokens: self.max_completion_tokens,
             temperature: self.temperature,
             top_p: self.top_p,
             modalities: self.modalities,
             audio_output: self.audio_output,
             tools: self.tools,
             tool_choice: self.tool_choice,
+            thinking: self.thinking,
+            reasoning_effort: self.reasoning_effort,
         })
     }
 }

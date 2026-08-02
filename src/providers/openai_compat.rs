@@ -69,11 +69,21 @@ impl OpenAICompatClient {
         request: &ChatRequest,
         provider_name: &str,
     ) -> Result<ChatResponse, BaochuanError> {
-        debug!(model = %request.model, provider = %provider_name, "sending chat request");
+        self.chat_json(&serde_json::to_value(request)?, provider_name).await
+    }
+
+    /// Send a pre-built JSON body (used when a provider remaps fields on the wire).
+    pub async fn chat_json(
+        &self,
+        body: &serde_json::Value,
+        provider_name: &str,
+    ) -> Result<ChatResponse, BaochuanError> {
+        let model = body.get("model").and_then(|v| v.as_str()).unwrap_or("?");
+        debug!(model = %model, provider = %provider_name, "sending chat request");
 
         let response = self
             .auth(self.client.post(self.chat_url()))
-            .json(request)
+            .json(body)
             .send()
             .await?;
 
@@ -98,9 +108,21 @@ impl OpenAICompatClient {
         request: &ChatRequest,
         provider_name: &str,
     ) -> Result<ChunkStream, BaochuanError> {
-        debug!(model = %request.model, provider = %provider_name, "starting streaming chat");
-
         let mut body = serde_json::to_value(request)?;
+        body["stream"] = serde_json::Value::Bool(true);
+        self.stream_chat_json(&body, provider_name).await
+    }
+
+    /// Send a pre-built streaming JSON body.
+    pub async fn stream_chat_json(
+        &self,
+        body: &serde_json::Value,
+        provider_name: &str,
+    ) -> Result<ChunkStream, BaochuanError> {
+        let model = body.get("model").and_then(|v| v.as_str()).unwrap_or("?");
+        debug!(model = %model, provider = %provider_name, "starting streaming chat");
+
+        let mut body = body.clone();
         body["stream"] = serde_json::Value::Bool(true);
 
         let response = self

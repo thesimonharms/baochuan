@@ -10,8 +10,7 @@ const DEFAULT_BASE_URL: &str = "https://api.mistral.ai/v1";
 /// A provider that connects to the [Mistral AI](https://mistral.ai/) API.
 ///
 /// The Mistral API is OpenAI-compatible. Notable models include
-/// `mistral-large-latest`, `mistral-small-latest`, and the open-weight
-/// `open-mistral-7b`.
+/// `mistral-large-latest`, `mistral-medium-latest`, and `mistral-small-latest`.
 ///
 /// # Example
 /// ```rust,no_run

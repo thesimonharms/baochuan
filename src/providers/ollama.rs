@@ -140,6 +140,7 @@ fn from_ollama_response(resp: OllamaChatResponse) -> ChatResponse {
                     Role::User
                 },
                 content: MessageContent::Text(resp.message.content),
+                reasoning_content: None,
                 audio: None,
                 tool_calls: None,
                 tool_call_id: None,

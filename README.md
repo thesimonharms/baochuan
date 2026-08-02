@@ -29,6 +29,8 @@ In the early 15th century, Admiral **Zheng He** commanded the largest wooden fle
 - **Own implementation** — no third-party SDK wrappers; direct HTTP to each provider
 - **Extensible** — implement the `Provider` trait to add any model provider
 - **Agent runtimes** — optional `AgentProvider` trait for stateful agent APIs such as Hermes Agent
+- **Reasoning support** — `thinking` / `reasoning_effort` for DeepSeek V4, Kimi, and similar APIs
+- **OpenAI-ready** — `max_tokens` is remapped to `max_completion_tokens` for o-series models
 
 ---
 
@@ -36,18 +38,18 @@ In the early 15th century, Admiral **Zheng He** commanded the largest wooden fle
 
 | Provider | Chat | Streaming | Model List | API | Env Var |
 |---|:---:|:---:|:---:|---|---|
-| [OpenAI](https://platform.openai.com/) | ✅ | ✅ | ✅ | OpenAI native | `OPENAI_API_KEY` |
-| [Anthropic](https://www.anthropic.com/) | ✅ | ✅ | ✅ | Anthropic native | `ANTHROPIC_API_KEY` |
-| [Google Gemini](https://ai.google.dev/) | ✅ | ✅ | ✅ | Gemini native | `GEMINI_API_KEY` |
-| [xAI Grok](https://console.x.ai/) | ✅ | ✅ | ✅ | xAI native | `XAI_API_KEY` |
-| [Mistral](https://mistral.ai/) | ✅ | ✅ | ✅ | Mistral native | `MISTRAL_API_KEY` |
-| [DeepSeek](https://platform.deepseek.com/) | ✅ | ✅ | ✅ | DeepSeek native | `DEEPSEEK_API_KEY` |
-| [GitHub Copilot](https://github.com/features/copilot) | ✅ | ✅ | ✅ | GitHub Copilot native | `GITHUB_TOKEN` |
-| [OpenRouter](https://openrouter.ai/) | ✅ | ✅ | ✅ | OpenRouter native | `OPENROUTER_API_KEY` |
-| [Moonshot AI / Kimi](https://platform.moonshot.cn/) | ✅ | ✅ | ✅ | Moonshot native | `MOONSHOT_API_KEY` |
-| [Perplexity](https://www.perplexity.ai/) | ✅ | ✅ | ✅ | Perplexity native | `PERPLEXITY_API_KEY` |
+| [OpenAI](https://platform.openai.com/) | ✅ | ✅ | ✅ | OpenAI Chat Completions | `OPENAI_API_KEY` |
+| [Anthropic](https://www.anthropic.com/) | ✅ | ✅ | ✅ | Anthropic Messages | `ANTHROPIC_API_KEY` |
+| [Google Gemini](https://ai.google.dev/) | ✅ | ✅ | ✅ | Gemini `generateContent` | `GEMINI_API_KEY` |
+| [xAI Grok](https://docs.x.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `XAI_API_KEY` |
+| [Mistral](https://mistral.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `MISTRAL_API_KEY` |
+| [DeepSeek](https://platform.deepseek.com/) | ✅ | ✅ | ✅ | OpenAI-compatible | `DEEPSEEK_API_KEY` |
+| [GitHub Copilot](https://github.com/features/copilot) | ✅ | ✅ | ✅ | Copilot Chat Completions | `GITHUB_TOKEN` |
+| [OpenRouter](https://openrouter.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `OPENROUTER_API_KEY` |
+| [Moonshot AI / Kimi](https://platform.kimi.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `MOONSHOT_API_KEY` |
+| [Perplexity](https://docs.perplexity.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible / Sonar | `PERPLEXITY_API_KEY` |
 | [Nous Portal](https://portal.nousresearch.com/) | ✅ | ✅ | ✅ | OpenAI-compatible | `NOUS_API_KEY` |
-| [Alibaba Qwen](https://dashscope.aliyun.com/) | ✅ | ✅ | — | DashScope native | `DASHSCOPE_API_KEY` |
+| [Alibaba Qwen](https://dashscope.aliyun.com/) | ✅ | ✅ | ✅ | DashScope compatible-mode | `DASHSCOPE_API_KEY` |
 | [Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/) | ✅ | ✅ | ✅ | CF native `/ai/run/` | `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` |
 | [LM Studio](https://lmstudio.ai/) | ✅ | ✅ | ✅ | LM Studio `/api/v0/` | _(none)_ |
 | [Ollama](https://ollama.com/) | ✅ | ✅ | ✅ | Ollama `/api/` | _(none)_ |
@@ -63,7 +65,7 @@ Add baochuan to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-baochuan = "0.1"
+baochuan = "0.2"
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -74,7 +76,7 @@ tokio = { version = "1", features = ["full"] }
 ### DeepSeek
 
 ```rust
-use baochuan::{providers::DeepSeekProvider, ChatMessage, ChatRequestBuilder, Provider};
+use baochuan::{providers::DeepSeekProvider, ChatMessage, ChatRequestBuilder, Provider, ThinkingConfig};
 
 #[tokio::main]
 async fn main() {
@@ -82,8 +84,9 @@ async fn main() {
         std::env::var("DEEPSEEK_API_KEY").expect("DEEPSEEK_API_KEY not set"),
     );
 
-    let request = ChatRequestBuilder::new("deepseek-chat")
+    let request = ChatRequestBuilder::new("deepseek-v4-flash")
         .message(ChatMessage::user("Tell me about the treasure ships of Zheng He."))
+        .thinking(ThinkingConfig::disabled())
         .max_tokens(512)
         .build()
         .unwrap();
@@ -127,7 +130,7 @@ async fn main() {
     .site_name("My App");
 
     // OpenRouter gives you access to hundreds of models:
-    let request = ChatRequestBuilder::new("anthropic/claude-3-5-sonnet")
+    let request = ChatRequestBuilder::new("anthropic/claude-sonnet-4")
         .message(ChatMessage::user("What is the speed of light?"))
         .build()
         .unwrap();
@@ -149,7 +152,7 @@ async fn main() {
         std::env::var("DEEPSEEK_API_KEY").unwrap(),
     );
 
-    let request = ChatRequestBuilder::new("deepseek-chat")
+    let request = ChatRequestBuilder::new("deepseek-v4-flash")
         .message(ChatMessage::user("Write a haiku about Rust."))
         .build()
         .unwrap();
@@ -220,7 +223,7 @@ use baochuan::{providers::DeepSeekProvider, ChatMessage, ChatRequestBuilder, Pro
 async fn main() {
     let provider = DeepSeekProvider::new(std::env::var("DEEPSEEK_API_KEY").unwrap());
 
-    let request = ChatRequestBuilder::new("deepseek-chat")
+    let request = ChatRequestBuilder::new("deepseek-v4-flash")
         .message(ChatMessage::system("You are a concise assistant. Reply in one sentence."))
         .message(ChatMessage::user("What is baochuan?"))
         .temperature(0.7)

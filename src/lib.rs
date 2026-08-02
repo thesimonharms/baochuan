@@ -22,7 +22,7 @@
 //!         std::env::var("DEEPSEEK_API_KEY").expect("DEEPSEEK_API_KEY not set"),
 //!     );
 //!
-//!     let request = ChatRequestBuilder::new("deepseek-chat")
+//!     let request = ChatRequestBuilder::new("deepseek-v4-flash")
 //!         .message(ChatMessage::user("Tell me about the treasure ships of Zheng He."))
 //!         .max_tokens(512)
 //!         .build()
@@ -50,6 +50,6 @@ pub use provider::Provider;
 pub use types::{
     AudioInput, AudioOutput, AudioOutputConfig, ChatMessage, ChatRequest, ChatRequestBuilder,
     ChatResponse, ContentPart, DocumentInput, FunctionCall, FunctionDefinition, ImageUrl,
-    MessageContent, ModelInfo, Role, Tool, ToolCall, ToolChoice, TtsRequest, TtsRequestBuilder,
-    Usage,
+    MessageContent, ModelInfo, Role, ThinkingConfig, Tool, ToolCall, ToolChoice, TtsRequest,
+    TtsRequestBuilder, Usage,
 };

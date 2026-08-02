@@ -5,12 +5,19 @@ use crate::provider::{ChunkStream, Provider};
 use crate::providers::openai_compat::OpenAICompatClient;
 use crate::types::{ChatRequest, ChatResponse, ModelInfo};
 
-const DEFAULT_BASE_URL: &str = "https://api.moonshot.cn/v1";
+/// International (default) Moonshot / Kimi endpoint.
+const DEFAULT_BASE_URL: &str = "https://api.moonshot.ai/v1";
 
-/// A provider that connects to [Moonshot AI](https://platform.moonshot.cn/) (Kimi).
+/// China-mainland Moonshot endpoint — use with [`MoonshotProvider::with_base_url`]
+/// when your API key was issued on platform.moonshot.cn.
+pub const CHINA_BASE_URL: &str = "https://api.moonshot.cn/v1";
+
+/// A provider that connects to [Moonshot AI / Kimi](https://platform.kimi.ai/).
 ///
-/// The Moonshot API is OpenAI-compatible. Models are sized by context window:
-/// `moonshot-v1-8k`, `moonshot-v1-32k`, `moonshot-v1-128k`.
+/// The API is OpenAI-compatible. Current models include `kimi-k3`, `kimi-k2.6`,
+/// and `kimi-k2.7-code`. The default base URL is the international endpoint
+/// (`api.moonshot.ai`); China-mainland keys must use
+/// [`CHINA_BASE_URL`] via [`with_base_url`](Self::with_base_url).
 ///
 /// # Example
 /// ```rust,no_run
@@ -20,7 +27,7 @@ const DEFAULT_BASE_URL: &str = "https://api.moonshot.cn/v1";
 /// async fn main() {
 ///     let provider = MoonshotProvider::new(std::env::var("MOONSHOT_API_KEY").unwrap());
 ///
-///     let request = ChatRequestBuilder::new("moonshot-v1-8k")
+///     let request = ChatRequestBuilder::new("kimi-k3")
 ///         .message(ChatMessage::user("你好！"))
 ///         .build()
 ///         .unwrap();
@@ -34,7 +41,7 @@ pub struct MoonshotProvider {
 }
 
 impl MoonshotProvider {
-    /// Create a new Moonshot AI provider.
+    /// Create a new Moonshot AI provider (international endpoint).
     ///
     /// ```rust,no_run
     /// let provider = baochuan::providers::MoonshotProvider::new(
@@ -47,7 +54,7 @@ impl MoonshotProvider {
         }
     }
 
-    /// Override the base URL.
+    /// Override the base URL (e.g. [`CHINA_BASE_URL`] for mainland China keys).
     pub fn with_base_url(mut self, base_url: impl Into<String>) -> Self {
         self.inner.base_url = base_url.into();
         self

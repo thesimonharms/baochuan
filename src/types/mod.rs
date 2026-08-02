@@ -10,7 +10,8 @@ pub use message::{
 };
 pub use model::ModelInfo;
 pub use request::{
-    AudioOutputConfig, ChatRequest, ChatRequestBuilder, TtsRequest, TtsRequestBuilder,
+    AudioOutputConfig, ChatRequest, ChatRequestBuilder, ThinkingConfig, TtsRequest,
+    TtsRequestBuilder,
 };
 pub use response::{
     AnthropicStreamDelta, AnthropicStreamEvent, AnthropicStreamMessage, ChatChoice, ChatResponse,
