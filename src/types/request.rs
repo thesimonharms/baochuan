@@ -30,12 +30,16 @@ pub struct ThinkingConfig {
 impl ThinkingConfig {
     /// Enable thinking / chain-of-thought generation.
     pub fn enabled() -> Self {
-        Self { thinking_type: "enabled".to_string() }
+        Self {
+            thinking_type: "enabled".to_string(),
+        }
     }
 
     /// Disable thinking (non-reasoning chat mode).
     pub fn disabled() -> Self {
-        Self { thinking_type: "disabled".to_string() }
+        Self {
+            thinking_type: "disabled".to_string(),
+        }
     }
 }
 

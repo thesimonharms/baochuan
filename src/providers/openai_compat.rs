@@ -69,7 +69,8 @@ impl OpenAICompatClient {
         request: &ChatRequest,
         provider_name: &str,
     ) -> Result<ChatResponse, BaochuanError> {
-        self.chat_json(&serde_json::to_value(request)?, provider_name).await
+        self.chat_json(&serde_json::to_value(request)?, provider_name)
+            .await
     }
 
     /// Send a pre-built JSON body (used when a provider remaps fields on the wire).

@@ -1115,10 +1115,12 @@ async fn test_perplexity_models() {
         .mock("GET", "/models")
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(r#"{"data":[
+        .with_body(
+            r#"{"data":[
             {"id":"sonar","owned_by":"perplexity","context_length":127072},
             {"id":"sonar-pro","owned_by":"perplexity","context_length":200000}
-        ]}"#)
+        ]}"#,
+        )
         .create_async()
         .await;
 
@@ -1184,10 +1186,12 @@ async fn test_qwen_models() {
         .mock("GET", "/compatible-mode/v1/models")
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(r#"{"data":[
+        .with_body(
+            r#"{"data":[
             {"id":"qwen-plus","object":"model","owned_by":"alibaba"},
             {"id":"qwen-max","object":"model","owned_by":"alibaba"}
-        ]}"#)
+        ]}"#,
+        )
         .create_async()
         .await;
 

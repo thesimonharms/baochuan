@@ -85,11 +85,15 @@ impl Provider for OpenAIProvider {
     }
 
     async fn chat(&self, request: &ChatRequest) -> Result<ChatResponse, BaochuanError> {
-        self.inner.chat_json(&to_openai_body(request)?, self.name()).await
+        self.inner
+            .chat_json(&to_openai_body(request)?, self.name())
+            .await
     }
 
     async fn stream_chat(&self, request: &ChatRequest) -> Result<ChunkStream, BaochuanError> {
-        self.inner.stream_chat_json(&to_openai_body(request)?, self.name()).await
+        self.inner
+            .stream_chat_json(&to_openai_body(request)?, self.name())
+            .await
     }
 
     async fn tts(&self, request: &TtsRequest) -> Result<Vec<u8>, BaochuanError> {
