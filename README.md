@@ -50,6 +50,16 @@ In the early 15th century, Admiral **Zheng He** commanded the largest wooden fle
 | [Perplexity](https://docs.perplexity.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible / Sonar | `PERPLEXITY_API_KEY` |
 | [Nous Portal](https://portal.nousresearch.com/) | ✅ | ✅ | ✅ | OpenAI-compatible | `NOUS_API_KEY` |
 | [Alibaba Qwen](https://dashscope.aliyun.com/) | ✅ | ✅ | ✅ | DashScope compatible-mode | `DASHSCOPE_API_KEY` |
+| [Groq](https://groq.com/) | ✅ | ✅ | ✅ | OpenAI-compatible | `GROQ_API_KEY` |
+| [Together AI](https://www.together.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `TOGETHER_API_KEY` |
+| [Fireworks AI](https://fireworks.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `FIREWORKS_API_KEY` |
+| [Cerebras](https://inference.cerebras.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `CEREBRAS_API_KEY` |
+| [SambaNova](https://cloud.sambanova.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `SAMBANOVA_API_KEY` |
+| [Zhipu AI / Z.ai (GLM)](https://z.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `ZHIPU_API_KEY` |
+| [MiniMax](https://www.minimax.io/) | ✅ | ✅ | ✅ | OpenAI-compatible | `MINIMAX_API_KEY` |
+| [Hugging Face](https://huggingface.co/docs/inference-providers) | ✅ | ✅ | ✅ | OpenAI-compatible router | `HF_TOKEN` |
+| [NVIDIA NIM](https://build.nvidia.com/) | ✅ | ✅ | ✅ | OpenAI-compatible | `NVIDIA_API_KEY` |
+| [DeepInfra](https://deepinfra.com/) | ✅ | ✅ | ✅ | OpenAI-compatible | `DEEPINFRA_API_KEY` |
 | [Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/) | ✅ | ✅ | ✅ | CF native `/ai/run/` | `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` |
 | [LM Studio](https://lmstudio.ai/) | ✅ | ✅ | ✅ | LM Studio `/api/v0/` | _(none)_ |
 | [Ollama](https://ollama.com/) | ✅ | ✅ | ✅ | Ollama `/api/` | _(none)_ |
