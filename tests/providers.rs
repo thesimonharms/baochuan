@@ -11,9 +11,12 @@ use baochuan::{
     AudioInput, ChatMessage, ChatRequestBuilder, ContentPart, FunctionDefinition, MessageContent,
     Provider, Tool, ToolCall, ToolChoice, TtsRequestBuilder,
     providers::{
-        AnthropicProvider, CloudflareProvider, DeepSeekProvider, GeminiProvider, GrokProvider,
-        LlamaCppProvider, LmStudioProvider, MistralProvider, MoonshotProvider, NousProvider,
-        OllamaProvider, OpenAIProvider, OpenRouterProvider, PerplexityProvider, QwenProvider,
+        AnthropicProvider, CerebrasProvider, CloudflareProvider, DeepInfraProvider,
+        DeepSeekProvider, FireworksProvider, GeminiProvider, GrokProvider, GroqProvider,
+        HuggingFaceProvider, LlamaCppProvider, LmStudioProvider, MiniMaxProvider, MistralProvider,
+        MoonshotProvider, NousProvider, NvidiaProvider, OllamaProvider, OpenAIProvider,
+        OpenRouterProvider, PerplexityProvider, QwenProvider, SambaNovaProvider, TogetherProvider,
+        ZhipuProvider,
     },
 };
 use futures_util::StreamExt;
@@ -1245,6 +1248,286 @@ fn test_qwen_provider_name() {
     assert_eq!(QwenProvider::new("k").name(), "qwen");
 }
 
+// ── Groq ──────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_groq_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/openai/v1/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = GroqProvider::new("gsk-test").with_base_url(server.url() + "/openai/v1");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[tokio::test]
+async fn test_groq_models() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("GET", "/openai/v1/models")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_models_body())
+        .create_async()
+        .await;
+
+    let provider = GroqProvider::new("gsk-test").with_base_url(server.url() + "/openai/v1");
+    let models = provider.models().await.unwrap();
+
+    assert_eq!(models.len(), 2);
+    assert_eq!(models[0].id, "gpt-4o");
+}
+
+#[test]
+fn test_groq_provider_name() {
+    assert_eq!(GroqProvider::new("k").name(), "groq");
+}
+
+// ── Together AI ───────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_together_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/v1/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = TogetherProvider::new("tgp-test").with_base_url(server.url() + "/v1");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[test]
+fn test_together_provider_name() {
+    assert_eq!(TogetherProvider::new("k").name(), "together");
+}
+
+// ── Fireworks AI ──────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_fireworks_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/inference/v1/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = FireworksProvider::new("fw-test").with_base_url(server.url() + "/inference/v1");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[test]
+fn test_fireworks_provider_name() {
+    assert_eq!(FireworksProvider::new("k").name(), "fireworks");
+}
+
+// ── Cerebras ──────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_cerebras_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/v1/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = CerebrasProvider::new("csk-test").with_base_url(server.url() + "/v1");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[test]
+fn test_cerebras_provider_name() {
+    assert_eq!(CerebrasProvider::new("k").name(), "cerebras");
+}
+
+// ── SambaNova ─────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_sambanova_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/v1/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = SambaNovaProvider::new("sn-test").with_base_url(server.url() + "/v1");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[test]
+fn test_sambanova_provider_name() {
+    assert_eq!(SambaNovaProvider::new("k").name(), "sambanova");
+}
+
+// ── Zhipu / Z.ai ──────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_zhipu_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/api/paas/v4/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = ZhipuProvider::new("zhipu-test").with_base_url(server.url() + "/api/paas/v4");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[tokio::test]
+async fn test_zhipu_stream_chat() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/api/paas/v4/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "text/event-stream")
+        .with_body(openai_stream_body())
+        .create_async()
+        .await;
+
+    let provider = ZhipuProvider::new("zhipu-test").with_base_url(server.url() + "/api/paas/v4");
+    let mut stream = provider.stream_chat(&simple_request()).await.unwrap();
+    let mut full = String::new();
+    while let Some(chunk) = stream.next().await {
+        if let Some(text) = chunk.unwrap().delta_content() {
+            full.push_str(text);
+        }
+    }
+    assert_eq!(full, "Paris.");
+}
+
+#[test]
+fn test_zhipu_provider_name() {
+    assert_eq!(ZhipuProvider::new("k").name(), "zhipu");
+}
+
+// ── MiniMax ───────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_minimax_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/v1/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = MiniMaxProvider::new("minimax-test").with_base_url(server.url() + "/v1");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[test]
+fn test_minimax_provider_name() {
+    assert_eq!(MiniMaxProvider::new("k").name(), "minimax");
+}
+
+// ── Hugging Face ──────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_huggingface_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/v1/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = HuggingFaceProvider::new("hf_test").with_base_url(server.url() + "/v1");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[test]
+fn test_huggingface_provider_name() {
+    assert_eq!(HuggingFaceProvider::new("k").name(), "huggingface");
+}
+
+// ── NVIDIA NIM ────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_nvidia_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/v1/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = NvidiaProvider::new("nvapi-test").with_base_url(server.url() + "/v1");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[test]
+fn test_nvidia_provider_name() {
+    assert_eq!(NvidiaProvider::new("k").name(), "nvidia");
+}
+
+// ── DeepInfra ─────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_deepinfra_chat_success() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("POST", "/v1/openai/chat/completions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(openai_success_body())
+        .create_async()
+        .await;
+
+    let provider = DeepInfraProvider::new("di-test").with_base_url(server.url() + "/v1/openai");
+    let response = provider.chat(&simple_request()).await.unwrap();
+
+    assert_eq!(response.content(), Some("Paris."));
+}
+
+#[test]
+fn test_deepinfra_provider_name() {
+    assert_eq!(DeepInfraProvider::new("k").name(), "deepinfra");
+}
+
 // ── Provider trait object ─────────────────────────────────────────────────────
 
 #[test]
@@ -1264,6 +1547,16 @@ fn test_provider_is_object_safe() {
         Box::new(LmStudioProvider::new()),
         Box::new(OllamaProvider::new()),
         Box::new(LlamaCppProvider::new()),
+        Box::new(GroqProvider::new("k")),
+        Box::new(TogetherProvider::new("k")),
+        Box::new(FireworksProvider::new("k")),
+        Box::new(CerebrasProvider::new("k")),
+        Box::new(SambaNovaProvider::new("k")),
+        Box::new(ZhipuProvider::new("k")),
+        Box::new(MiniMaxProvider::new("k")),
+        Box::new(HuggingFaceProvider::new("k")),
+        Box::new(NvidiaProvider::new("k")),
+        Box::new(DeepInfraProvider::new("k")),
     ];
 
     let names: Vec<&str> = providers.iter().map(|p| p.name()).collect();
@@ -1283,7 +1576,17 @@ fn test_provider_is_object_safe() {
             "cloudflare",
             "lmstudio",
             "ollama",
-            "llamacpp"
+            "llamacpp",
+            "groq",
+            "together",
+            "fireworks",
+            "cerebras",
+            "sambanova",
+            "zhipu",
+            "minimax",
+            "huggingface",
+            "nvidia",
+            "deepinfra"
         ]
     );
 }

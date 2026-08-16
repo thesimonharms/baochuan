@@ -11,7 +11,6 @@ Cargo.lock
 
 # IDE
 .idea/
-.vscode/
 *.iml
 
 # AI editor files
@@ -30,3 +29,7 @@ Thumbs.db
 
 # Rust
 **/*.rs.bk
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
