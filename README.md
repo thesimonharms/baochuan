@@ -47,7 +47,7 @@ In the early 15th century, Admiral **Zheng He** commanded the largest wooden fle
 | [GitHub Copilot](https://github.com/features/copilot) | ✅ | ✅ | ✅ | Copilot Chat Completions | `GITHUB_TOKEN` |
 | [OpenRouter](https://openrouter.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `OPENROUTER_API_KEY` |
 | [Moonshot AI / Kimi](https://platform.kimi.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible | `MOONSHOT_API_KEY` |
-| [Perplexity](https://docs.perplexity.ai/) | ✅ | ✅ | ✅ | OpenAI-compatible / Sonar | `PERPLEXITY_API_KEY` |
+| [Perplexity](https://docs.perplexity.ai/) | ✅ | ✅ | ✅ | Agent API `/v1/agent` | `PERPLEXITY_API_KEY` |
 | [Nous Portal](https://portal.nousresearch.com/) | ✅ | ✅ | ✅ | OpenAI-compatible | `NOUS_API_KEY` |
 | [Alibaba Qwen](https://dashscope.aliyun.com/) | ✅ | ✅ | ✅ | DashScope compatible-mode | `DASHSCOPE_API_KEY` |
 | [Groq](https://groq.com/) | ✅ | ✅ | ✅ | OpenAI-compatible | `GROQ_API_KEY` |
@@ -75,7 +75,7 @@ Add baochuan to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-baochuan = "0.2"
+baochuan = "0.3"
 tokio = { version = "1", features = ["full"] }
 ```
 

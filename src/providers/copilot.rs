@@ -11,9 +11,12 @@ const DEFAULT_BASE_URL: &str = "https://api.githubcopilot.com";
 
 /// A provider that connects to the [GitHub Copilot](https://github.com/features/copilot) API.
 ///
-/// The Copilot API is OpenAI-compatible and exposes a variety of models
-/// including GPT-4o, Claude 3.5 Sonnet, o1, and others depending on your
-/// Copilot subscription.
+/// The Copilot API is OpenAI-compatible at `POST /chat/completions` for most
+/// models. Newer GPT-5 / Codex models on Copilot are served from
+/// `POST /responses` instead and will reject Chat Completions with HTTP 400.
+/// This provider still targets Chat Completions; use a Completions-capable
+/// model (for example `gpt-4o`) or point `with_base_url` at a Responses
+/// gateway if you need those newer models.
 ///
 /// Authentication uses a GitHub personal access token (classic or fine-grained)
 /// with Copilot access, or the `GITHUB_TOKEN` available in GitHub Actions.
