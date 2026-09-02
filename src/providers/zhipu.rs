@@ -16,8 +16,8 @@ pub const CHINA_BASE_URL: &str = "https://open.bigmodel.cn/api/paas/v4";
 /// A provider that connects to [Zhipu AI / Z.ai](https://z.ai/) for **GLM**
 /// models.
 ///
-/// The API is OpenAI-compatible. Current models include `glm-4.6` and
-/// `glm-4.5-air`. The default base URL is the international endpoint
+/// The API is OpenAI-compatible. Current models include `glm-5.3` and
+/// `glm-4.6`. The default base URL is the international endpoint
 /// (`api.z.ai`); China-mainland keys must use [`CHINA_BASE_URL`] via
 /// [`with_base_url`](Self::with_base_url).
 ///
@@ -29,7 +29,7 @@ pub const CHINA_BASE_URL: &str = "https://open.bigmodel.cn/api/paas/v4";
 /// async fn main() {
 ///     let provider = ZhipuProvider::new(std::env::var("ZHIPU_API_KEY").unwrap());
 ///
-///     let request = ChatRequestBuilder::new("glm-4.6")
+///     let request = ChatRequestBuilder::new("glm-5.3")
 ///         .message(ChatMessage::user("你好！"))
 ///         .build()
 ///         .unwrap();

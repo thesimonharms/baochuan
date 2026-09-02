@@ -486,6 +486,8 @@ fn gemini_sse_to_chunks(
 /// The Gemini API uses a different request/response format from OpenAI-compatible
 /// providers. baochuan handles the conversion automatically. Authentication uses
 /// the `x-goog-api-key` header (query-string `?key=` is no longer preferred).
+/// Google is retiring unrestricted standard keys in favour of AI Studio auth
+/// keys; new keys created in AI Studio are already auth keys.
 ///
 /// # Example
 /// ```rust,no_run

@@ -1,7 +1,8 @@
 [package]
 name = "baochuan"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
+rust-version = "1.85"
 description = "A multi-provider AI API client for Rust — connecting your code to every major AI provider."
 license = "MIT"
 readme = "README.md"
@@ -11,17 +12,19 @@ keywords = ["ai", "llm", "openai", "anthropic", "gemini"]
 categories = ["api-bindings", "asynchronous", "web-programming::http-client"]
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.12", features = ["json", "stream"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-futures-util = "0.3"
-thiserror = "2"
-tracing = "0.1"
-async-trait = "0.1"
-bytes = "1"
+tokio = { version = "1.53", features = ["full"] }
+# reqwest 0.13 defaults to rustls. `query` is a separate feature as of 0.13
+# (Cloudflare model listing uses RequestBuilder::query).
+reqwest = { version = "0.13", features = ["json", "stream", "query"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+futures-util = "0.3.31"
+thiserror = "2.0.17"
+tracing = "0.1.41"
+async-trait = "0.1.88"
+bytes = "1.10"
 
 [dev-dependencies]
-tokio = { version = "1", features = ["full", "test-util"] }
-tracing-subscriber = "0.3"
-mockito = "1"
+tokio = { version = "1.53", features = ["full", "test-util"] }
+tracing-subscriber = "0.3.20"
+mockito = "1.7.2"

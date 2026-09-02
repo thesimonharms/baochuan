@@ -1083,26 +1083,31 @@ fn test_cloudflare_provider_name() {
 async fn test_perplexity_chat_with_citations() {
     let mut server = mockito::Server::new_async().await;
     server
-        .mock("POST", "/chat/completions")
+        .mock("POST", "/v1/agent")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
             r#"{
             "id": "ppl-test",
-            "model": "sonar-pro",
-            "choices": [{
-                "index": 0,
-                "message": {"role": "assistant", "content": "Paris is the capital of France."},
-                "finish_reason": "stop"
-            }],
-            "citations": ["https://en.wikipedia.org/wiki/Paris"],
-            "usage": {"prompt_tokens": 10, "completion_tokens": 8, "total_tokens": 18}
+            "model": "perplexity/sonar",
+            "output": [
+                {
+                    "type": "search_results",
+                    "results": [{"id": 1, "url": "https://en.wikipedia.org/wiki/Paris"}]
+                },
+                {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": "Paris is the capital of France."}]
+                }
+            ],
+            "usage": {"input_tokens": 10, "output_tokens": 8, "total_tokens": 18}
         }"#,
         )
         .create_async()
         .await;
 
-    let provider = PerplexityProvider::new("ppl-key").with_base_url(server.url());
+    let provider = PerplexityProvider::new("ppl-key").with_base_url(server.url() + "/v1");
     let response = provider.chat(&simple_request()).await.unwrap();
 
     assert_eq!(response.content(), Some("Paris is the capital of France."));
@@ -1115,7 +1120,7 @@ async fn test_perplexity_chat_with_citations() {
 async fn test_perplexity_models() {
     let mut server = mockito::Server::new_async().await;
     server
-        .mock("GET", "/models")
+        .mock("GET", "/v1/models")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
@@ -1127,7 +1132,7 @@ async fn test_perplexity_models() {
         .create_async()
         .await;
 
-    let provider = PerplexityProvider::new("ppl-key").with_base_url(server.url());
+    let provider = PerplexityProvider::new("ppl-key").with_base_url(server.url() + "/v1");
     let models = provider.models().await.unwrap();
 
     assert_eq!(models.len(), 2);
@@ -1139,19 +1144,19 @@ async fn test_perplexity_models() {
 async fn test_perplexity_no_citations_when_absent() {
     let mut server = mockito::Server::new_async().await;
     server
-        .mock("POST", "/chat/completions")
+        .mock("POST", "/v1/agent")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{
             "id": "ppl-test2",
-            "model": "sonar",
-            "choices": [{"index":0,"message":{"role":"assistant","content":"Paris."},"finish_reason":"stop"}],
-            "usage": {"prompt_tokens": 5, "completion_tokens": 1, "total_tokens": 6}
+            "model": "perplexity/sonar",
+            "output": [{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Paris."}]}],
+            "usage": {"input_tokens": 5, "output_tokens": 1, "total_tokens": 6}
         }"#)
         .create_async()
         .await;
 
-    let provider = PerplexityProvider::new("ppl-key").with_base_url(server.url());
+    let provider = PerplexityProvider::new("ppl-key").with_base_url(server.url() + "/v1");
     let response = provider.chat(&simple_request()).await.unwrap();
 
     assert!(response.citations.is_none());
