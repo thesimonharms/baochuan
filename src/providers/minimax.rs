@@ -14,7 +14,7 @@ pub const CHINA_BASE_URL: &str = "https://api.minimaxi.com/v1";
 
 /// A provider that connects to [MiniMax](https://www.minimax.io/).
 ///
-/// The API is OpenAI-compatible. Current models include `MiniMax-M2`.
+/// The API is OpenAI-compatible. Current models include `MiniMax-M3`.
 /// The default base URL is the international endpoint (`api.minimax.io`);
 /// China-mainland keys must use [`CHINA_BASE_URL`] via
 /// [`with_base_url`](Self::with_base_url).
@@ -27,7 +27,7 @@ pub const CHINA_BASE_URL: &str = "https://api.minimaxi.com/v1";
 /// async fn main() {
 ///     let provider = MiniMaxProvider::new(std::env::var("MINIMAX_API_KEY").unwrap());
 ///
-///     let request = ChatRequestBuilder::new("MiniMax-M2")
+///     let request = ChatRequestBuilder::new("MiniMax-M3")
 ///         .message(ChatMessage::user("你好！"))
 ///         .build()
 ///         .unwrap();

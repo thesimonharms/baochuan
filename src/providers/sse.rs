@@ -237,6 +237,128 @@ where
     })
 }
 
+/// Parse OpenAI Responses / Perplexity Agent SSE into [`StreamChunk`]s.
+///
+/// These APIs emit named events (`event:`) plus a JSON `data:` payload.
+/// Text arrives as `response.output_text.delta` with a `delta` string.
+pub fn responses_sse_to_chunks<S>(
+    stream: S,
+    model: String,
+) -> impl Stream<Item = Result<StreamChunk, BaochuanError>> + Send
+where
+    S: Stream<Item = Result<Bytes, reqwest::Error>> + Send + 'static,
+{
+    let mut buffer = String::new();
+    let mut current_event = String::new();
+    let mut index: u64 = 0;
+    let mut response_id = String::new();
+
+    stream.flat_map(move |result| {
+        let items: Vec<Result<StreamChunk, BaochuanError>> = match result {
+            Err(e) => vec![Err(BaochuanError::Http(e))],
+            Ok(bytes) => {
+                buffer.push_str(&String::from_utf8_lossy(&bytes));
+                let mut chunks = Vec::new();
+
+                while let Some(newline_pos) = buffer.find('\n') {
+                    let line = buffer[..newline_pos].trim().to_string();
+                    buffer.drain(..=newline_pos);
+
+                    if line.is_empty() {
+                        current_event.clear();
+                        continue;
+                    }
+
+                    if let Some(event_type) = line.strip_prefix("event:") {
+                        current_event = event_type.trim().to_string();
+                        continue;
+                    }
+
+                    let data = match line.strip_prefix("data:") {
+                        Some(rest) => rest.trim(),
+                        None => continue,
+                    };
+
+                    if data == "[DONE]" {
+                        break;
+                    }
+
+                    let Ok(value) = serde_json::from_str::<serde_json::Value>(data) else {
+                        continue;
+                    };
+
+                    if let Some(id) = value.get("id").and_then(|v| v.as_str()) {
+                        response_id = id.to_string();
+                    } else if let Some(id) = value
+                        .get("response")
+                        .and_then(|r| r.get("id"))
+                        .and_then(|v| v.as_str())
+                    {
+                        response_id = id.to_string();
+                    }
+
+                    let event_name = if current_event.is_empty() {
+                        value
+                            .get("type")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string()
+                    } else {
+                        current_event.clone()
+                    };
+
+                    match event_name.as_str() {
+                        "response.output_text.delta" => {
+                            if let Some(text) = value.get("delta").and_then(|v| v.as_str())
+                                && !text.is_empty()
+                            {
+                                index += 1;
+                                chunks.push(Ok(StreamChunk {
+                                    id: if response_id.is_empty() {
+                                        format!("agent-chunk-{index}")
+                                    } else {
+                                        response_id.clone()
+                                    },
+                                    model: model.clone(),
+                                    choices: vec![StreamChoice {
+                                        index: 0,
+                                        delta: Delta {
+                                            role: None,
+                                            content: Some(text.to_string()),
+                                            tool_calls: None,
+                                        },
+                                        finish_reason: None,
+                                    }],
+                                }));
+                            }
+                        }
+                        "response.completed" | "response.done" => {
+                            chunks.push(Ok(StreamChunk {
+                                id: response_id.clone(),
+                                model: model.clone(),
+                                choices: vec![StreamChoice {
+                                    index: 0,
+                                    delta: Delta {
+                                        role: None,
+                                        content: None,
+                                        tool_calls: None,
+                                    },
+                                    finish_reason: Some("stop".to_string()),
+                                }],
+                            }));
+                        }
+                        _ => {}
+                    }
+                }
+
+                chunks
+            }
+        };
+
+        futures_util::stream::iter(items)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -297,6 +419,29 @@ mod tests {
         assert_eq!(chunks.len(), 3);
         assert_eq!(chunks[0].as_ref().unwrap().delta_content(), Some("Hi"));
         assert_eq!(chunks[1].as_ref().unwrap().delta_content(), Some(" there"));
+        assert!(chunks[2].as_ref().unwrap().is_finished());
+    }
+
+    #[tokio::test]
+    async fn test_responses_sse_parsing() {
+        let data = concat!(
+            "event: response.output_text.delta\n",
+            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"Par\"}\n",
+            "\n",
+            "event: response.output_text.delta\n",
+            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"is.\"}\n",
+            "\n",
+            "event: response.completed\n",
+            "data: {\"type\":\"response.completed\",\"id\":\"resp_1\"}\n",
+            "\n",
+        );
+
+        let chunks: Vec<_> = responses_sse_to_chunks(make_stream(data), "sonar".into())
+            .collect()
+            .await;
+        assert_eq!(chunks.len(), 3);
+        assert_eq!(chunks[0].as_ref().unwrap().delta_content(), Some("Par"));
+        assert_eq!(chunks[1].as_ref().unwrap().delta_content(), Some("is."));
         assert!(chunks[2].as_ref().unwrap().is_finished());
     }
 }
